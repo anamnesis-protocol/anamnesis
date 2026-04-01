@@ -342,63 +342,76 @@ def pull_package_index(index_file_id: str, key: bytes, token_id: str) -> list[Pa
 
 
 # ---------------------------------------------------------------------------
-# Relevance-gated query (Claims 8-9 from )
+# Relevance-gated query
 # ---------------------------------------------------------------------------
 
 def query_packages(
- query: str,
- packages: list[PackageMetadata],
- top_n: int = 5,
- threshold: float = 0.0,
+    query: str,
+    packages: list[PackageMetadata],
+    top_n: int = 5,
+    threshold: float = 0.0,
+    use_rag: bool = True,
 ) -> list[tuple[float, PackageMetadata]]:
- """
- Score and rank packages by relevance to the query.
+    """
+    Score and rank packages by relevance to the query.
 
- Scoring: keyword overlap between query tokens and package (name + keywords + description).
- Packages scoring below threshold are excluded (relevance gate).
+    Scoring:
+    - If use_rag=True (default): TF-IDF cosine similarity (better semantic matching)
+    - If use_rag=False: Simple keyword overlap (faster, less accurate)
 
- Args:
- query: Natural language query string
- packages: List of PackageMetadata to search
- top_n: Maximum results to return
- threshold: Minimum score to include (0.0 = return all matches)
+    Packages scoring below threshold are excluded (relevance gate).
 
- Returns:
- List of (score, PackageMetadata) sorted by score descending
- """
- # Tokenize query
- query_tokens = set(re.findall(r"\b[a-z][a-z0-9]{2,}\b", query.lower()))
+    Args:
+        query: Natural language query string
+        packages: List of PackageMetadata to search
+        top_n: Maximum results to return
+        threshold: Minimum score to include (0.0 = return all matches)
+        use_rag: Use TF-IDF RAG scoring (default True)
 
- if not query_tokens:
- return []
+    Returns:
+        List of (score, PackageMetadata) sorted by score descending
 
- scored = []
- for pkg in packages:
- # Build searchable text from package metadata
- pkg_tokens = set(
- re.findall(
- r"\b[a-z][a-z0-9]{2,}\b",
- " ".join([
- pkg.name,
- pkg.description,
- " ".join(pkg.keywords),
- pkg.category,
- ]).lower(),
- )
- )
+    Example:
+        >>> results = query_packages("hedera smart contract", packages, top_n=3, threshold=0.05)
+        >>> for score, pkg in results:
+        ...     print(f"{score:.3f} - {pkg.name}")
+    """
+    if use_rag:
+        # Use TF-IDF RAG scoring for better semantic matching
+        from src.rag import rag_query_packages
+        return rag_query_packages(query, packages, top_n, threshold)
+    
+    # Fallback: simple keyword overlap (original implementation)
+    query_tokens = set(re.findall(r"\b[a-z][a-z0-9]{2,}\b", query.lower()))
 
- # Score = Jaccard-like overlap (intersection / query size)
- overlap = query_tokens & pkg_tokens
- if not overlap:
- continue
+    if not query_tokens:
+        return []
 
- score = len(overlap) / len(query_tokens)
+    scored = []
+    for pkg in packages:
+        pkg_tokens = set(
+            re.findall(
+                r"\b[a-z][a-z0-9]{2,}\b",
+                " ".join([
+                    pkg.name,
+                    pkg.description,
+                    " ".join(pkg.keywords),
+                    pkg.category,
+                ]).lower(),
+            )
+        )
 
- if score >= threshold:
- scored.append((score, pkg))
+        overlap = query_tokens & pkg_tokens
+        if not overlap:
+            continue
 
- scored.sort(key=lambda x: x[0], reverse=True)
- return scored[:top_n]
+        score = len(overlap) / len(query_tokens)
+
+        if score >= threshold:
+            scored.append((score, pkg))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return scored[:top_n]
 
 
 # ---------------------------------------------------------------------------
