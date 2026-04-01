@@ -217,6 +217,46 @@ Hedera testnet has rate limits. Wait a few seconds between transactions.
 
 ## Advanced Usage
 
+### RAG-Based Memory Package Search
+
+The system uses TF-IDF (Term Frequency-Inverse Document Frequency) to intelligently search your encrypted memory packages by relevance:
+
+```python
+from src.memory_packages import query_packages, pull_package_index
+from src.vault import get_package_key, SOUL_TOKEN_ID
+
+# Load your package index
+package_key = get_package_key(SOUL_TOKEN_ID)
+packages = pull_package_index(package_key, SOUL_TOKEN_ID)
+
+# Query by natural language
+results = query_packages(
+    "hedera smart contract deployment",
+    packages,
+    top_n=5,           # Return top 5 matches
+    threshold=0.05,    # Minimum relevance score
+    use_rag=True       # Use TF-IDF scoring (default)
+)
+
+# View results
+for score, pkg in results:
+    print(f"{score:.3f} - {pkg.name}")
+    print(f"  Category: {pkg.category}")
+    print(f"  Keywords: {', '.join(pkg.keywords)}")
+```
+
+**How it works:**
+- Builds TF-IDF vectors from package metadata (name, description, keywords)
+- Computes cosine similarity between query and each package
+- Returns packages ranked by relevance
+- Keywords are weighted 2x for better matching
+
+**Tips:**
+- Use natural language queries: "blockchain development session"
+- Lower threshold (0.01-0.05) for broader results
+- Higher threshold (0.1-0.3) for precise matches
+- Set `use_rag=False` for simple keyword matching (faster but less accurate)
+
 ### Using Different AI Models
 
 Add API keys to your `.env`:

@@ -22,6 +22,7 @@ Sovereign AI Context uses Hedera Hashgraph to give you cryptographic proof of ow
 - **Platform-Independent**: Load your context into any AI model (Claude, GPT-4, Gemini, etc.)
 - **Verifiable Ownership**: Your context token NFT proves cryptographic ownership on-chain
 - **Permanent**: Your AI's memory persists on Hedera's decentralized network, not a company's server
+- **Intelligent Search**: TF-IDF RAG finds relevant memory packages by semantic similarity, not just keywords
 
 ---
 
@@ -103,6 +104,8 @@ sovereign-ai-context/
 ---
 
 ## Quick Start
+
+**📖 For detailed setup instructions, see [SETUP.md](SETUP.md)**
 
 ### Prerequisites
 - Python 3.10+
