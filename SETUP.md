@@ -257,6 +257,42 @@ for score, pkg in results:
 - Higher threshold (0.1-0.3) for precise matches
 - Set `use_rag=False` for simple keyword matching (faster but less accurate)
 
+### Vault Section Metadata
+
+Track vault section health with YAML frontmatter metadata:
+
+```bash
+# Check vault health
+python scripts/vault_health.py
+
+# Add metadata to sections without it
+python scripts/vault_health.py --add-metadata
+
+# Mark all sections as reviewed today
+python scripts/vault_health.py --mark-reviewed
+
+# Show only stale sections
+python scripts/vault_health.py --stale
+```
+
+**Metadata Format:**
+```yaml
+---
+tags: ["#type/identity", "#status/active"]
+created: "2026-03-01"
+last_updated: "2026-04-01"
+last_reviewed: "2026-04-01"
+status: "active"
+version: "1.0"
+---
+```
+
+**Benefits:**
+- Detect stale content (not reviewed in 90+ days)
+- Track section lifecycle (created, updated, reviewed)
+- Tag-based organization
+- Health monitoring and reporting
+
 ### Using Different AI Models
 
 Add API keys to your `.env`:
