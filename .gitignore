@@ -1,0 +1,16 @@
+.env
+.env.testnet
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.venv/
+venv/
+index/
+*.key
+*.pem
+.vault_index.json
+.session_start_hashes.json

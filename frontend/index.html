@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+ <title>Arty Fitchels — Your AI Harness</title>
+ <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+ <!-- Header -->
+ <header>
+ <div class="logo">
+ <span class="logo-icon">⬡</span>
+ <span class="logo-text">Arty Fitchels</span>
+ <span class="badge">PATENT PENDING</span>
+ </div>
+ <div class="tagline">You're in command. AI does the work. Hedera locks it down. Your harness, your rules, your results — encrypted end-to-end and owned by nobody but you.</div>
+ <div class="auth-indicator" id="auth-indicator" style="display:none"></div>
+ <button class="btn-settings" id="btn-settings" onclick="openApiKeysModal()" title="AI API Keys">⚙</button>
+ </header>
+
+ <!-- Main layout -->
+ <main>
+
+ <!-- LEFT: Step-by-step flow -->
+ <section class="flow-panel">
+
+ <!-- Step 1: Provision -->
+ <div class="step" id="step-provision">
+ <div class="step-header">
+ <div class="step-number">01</div>
+ <div class="step-info">
+ <div class="step-title">Build Your Harness</div>
+ <div class="step-desc">Mint your personal AI harness — your encrypted directives and context, locked on Hedera. You define how AI behaves. You own the result. Nobody else gets in.</div>
+ </div>
+ <div class="step-status" id="status-provision">READY</div>
+ </div>
+ <div class="step-body">
+ <div class="field-row">
+ <label>What should your AI call you?</label>
+ <input type="text" id="account-id" placeholder="e.g. Boss, Alex, Coach..." />
+ </div>
+ <div class="field-row">
+ <label>Name your AI</label>
+ <input type="text" id="companion-name" placeholder="e.g. Aria, Dex, Nova, Atlas..." />
+ </div>
+ <button class="btn-primary" id="btn-provision" onclick="startProvision()">
+ Mint My AI Harness — $99
+ </button>
+ </div>
+ </div>
+
+ <!-- Step 2: Sign -->
+ <div class="step locked" id="step-sign">
+ <div class="step-header">
+ <div class="step-number">02</div>
+ <div class="step-info">
+ <div class="step-title">Prove It's You</div>
+ <div class="step-desc">One signature makes you the sole operator of your harness. Your identity becomes the key. Not even we can open it without you. That's the whole point.</div>
+ </div>
+ <div class="step-status" id="status-sign">LOCKED</div>
+ </div>
+ <div class="step-body">
+ <div class="data-row">
+ <span class="data-label">Context Token</span>
+ <span class="data-value mono" id="display-token-id">—</span>
+ </div>
+ <div class="data-row">
+ <span class="data-label">Challenge</span>
+ <span class="data-value mono truncate" id="display-challenge">—</span>
+ </div>
+
+ <!-- Sign mode toggle -->
+ <div class="mode-toggle">
+ <button class="toggle-btn active" id="toggle-wallet" onclick="setSignMode('wallet')">🔗 HashPack</button>
+ <button class="toggle-btn" id="toggle-demo" onclick="setSignMode('demo')">⚡ Demo Mode</button>
+ </div>
+
+ <!-- Wallet mode -->
+ <div class="sign-mode" id="mode-wallet">
+ <div id="wallet-disconnected">
+ <button class="btn-wallet" id="btn-connect-wallet" onclick="connectWallet()">
+ Connect HashPack
+ </button>
+ <div class="sign-note" id="wallet-sdk-note">Loading wallet SDK...</div>
+ </div>
+ <div id="wallet-connected" style="display:none">
+ <div class="wallet-status">
+ <span class="wallet-dot">●</span>
+ <span id="display-wallet-account">—</span>
+ </div>
+ <button class="btn-primary" id="btn-wallet-sign" onclick="walletSign()">
+ Sign with HashPack
+ </button>
+ <button class="btn-ghost" onclick="disconnectWallet()">Disconnect</button>
+ </div>
+ </div>
+
+ <!-- Demo mode (operator key, no wallet) -->
+ <div class="sign-mode" id="mode-demo" style="display:none">
+ <button class="btn-secondary" id="btn-demo-sign" onclick="demoSign()">
+ ⚡ Sign with Arty Fitchels Key
+ </button>
+ <div class="sign-note">Arty Fitchels handles the signing server-side — no personal wallet required</div>
+ </div>
+ </div>
+ </div>
+
+ <!-- Step 3: Complete Provisioning -->
+ <div class="step locked" id="step-complete">
+ <div class="step-header">
+ <div class="step-number">03</div>
+ <div class="step-info">
+ <div class="step-title">Lock It Down</div>
+ <div class="step-desc">Your harness gets encrypted and committed to Hedera. Immutable. Tamper-proof. We can't read it. No platform can change it. It's yours on-chain.</div>
+ </div>
+ <div class="step-status" id="status-complete">LOCKED</div>
+ </div>
+ <div class="step-body">
+ <div class="data-row">
+ <span class="data-label">Signature</span>
+ <span class="data-value mono truncate" id="display-sig">—</span>
+ </div>
+ <button class="btn-primary" id="btn-complete" onclick="completeProvision()">
+ Encrypt &amp; Secure My Vault
+ </button>
+ </div>
+ </div>
+
+ <!-- Step 4: Open Session -->
+ <div class="step locked" id="step-session">
+ <div class="step-header">
+ <div class="step-number">04</div>
+ <div class="step-info">
+ <div class="step-title">Load Your Harness</div>
+ <div class="step-desc">Your key decrypts your harness from Hedera. Your directives load in. AI gets its orders. You give the commands — it executes them.</div>
+ </div>
+ <div class="step-status" id="status-session">LOCKED</div>
+ </div>
+ <div class="step-body">
+ <div class="data-row">
+ <span class="data-label">Index File</span>
+ <span class="data-value mono" id="display-index">—</span>
+ </div>
+ <div class="data-row">
+ <span class="data-label">Registered</span>
+ <span class="data-value" id="display-registered">—</span>
+ </div>
+ <button class="btn-primary" id="btn-open" onclick="openSession()">
+ Load My Harness
+ </button>
+ </div>
+ </div>
+
+ <!-- Step 5: Active Session -->
+ <div class="step locked" id="step-active">
+ <div class="step-header">
+ <div class="step-number">05</div>
+ <div class="step-info">
+ <div class="step-title">Harness Active</div>
+ <div class="step-desc">You're in command. Directives loaded. AI works for you — not the other way around. Every session stays inside your encrypted harness, audited on Hedera, invisible to us.</div>
+ </div>
+ <div class="step-status pulse" id="status-active">LOCKED</div>
+ </div>
+ <div class="step-body">
+ <div class="data-row">
+ <span class="data-label">Session ID</span>
+ <span class="data-value mono" id="display-session-id">—</span>
+ </div>
+ <div class="data-row">
+ <span class="data-label">Expires</span>
+ <span class="data-value" id="display-expires">—</span>
+ </div>
+ <div class="session-controls">
+ <button class="btn-secondary" onclick="closeSession()">Close Session</button>
+ </div>
+ </div>
+ </div>
+
+ </section>
+
+ <!-- RIGHT: Live output -->
+ <section class="output-panel">
+
+ <!-- KDF Visualization -->
+ <div class="panel-card" id="kdf-panel">
+ <div class="panel-title">Your Encryption Key <span class="claim-tag">Patent Pending</span></div>
+ <div class="kdf-diagram">
+ <div class="kdf-input" id="kdf-token">
+ <div class="kdf-label">Token ID</div>
+ <div class="kdf-value mono" id="kdf-token-val">—</div>
+ </div>
+ <div class="kdf-plus">+</div>
+ <div class="kdf-input" id="kdf-sig">
+ <div class="kdf-label">Wallet Sig</div>
+ <div class="kdf-value mono" id="kdf-sig-val">—</div>
+ </div>
+ <div class="kdf-arrow">→</div>
+ <div class="kdf-box">
+ <div class="kdf-label">HKDF-SHA256</div>
+ <div class="kdf-sublabel">RFC 5869</div>
+ </div>
+ <div class="kdf-arrow">→</div>
+ <div class="kdf-output" id="kdf-key">
+ <div class="kdf-label">AES-256-GCM Key</div>
+ <div class="kdf-value mono" id="kdf-key-val">—</div>
+ <div class="kdf-discard" id="kdf-discard"></div>
+ </div>
+ </div>
+ </div>
+
+ <!-- Vault Sections -->
+ <div class="panel-card" id="sections-panel">
+ <div class="panel-title">Your Vault Contents <span class="claim-tag">Hedera Encrypted</span></div>
+ <div class="sections-list" id="sections-list">
+ <div class="section-item placeholder">
+ <span class="section-icon">🔒</span>
+ <span class="section-name">soul</span>
+ <span class="section-status">awaiting vault creation</span>
+ </div>
+ <div class="section-item placeholder">
+ <span class="section-icon">🔒</span>
+ <span class="section-name">user</span>
+ <span class="section-status">awaiting vault creation</span>
+ </div>
+ <div class="section-item placeholder">
+ <span class="section-icon">🔒</span>
+ <span class="section-name">symbiote</span>
+ <span class="section-status">awaiting vault creation</span>
+ </div>
+ <div class="section-item placeholder">
+ <span class="section-icon">🔒</span>
+ <span class="section-name">session_state</span>
+ <span class="section-status">awaiting vault creation</span>
+ </div>
+ </div>
+ </div>
+
+ <!-- Chat Panel (shown when session is active) -->
+ <div class="panel-card" id="chat-panel" style="display:none">
+ <div class="panel-title">
+ Direct Your AI
+ <span class="claim-tag">Your Private Harness</span>
+ </div>
+ <div class="chat-toolbar">
+ <select id="model-select" class="model-select-dropdown">
+ <option>—</option>
+ </select>
+ <span class="chat-vault-badge">🔐 Harness active</span>
+ </div>
+ <div id="chat-messages" class="chat-messages"></div>
+ <div class="chat-input-area">
+ <textarea id="chat-input" class="chat-input"
+ placeholder="Give your AI its orders… (Enter to send, Shift+Enter for newline)"
+ rows="2"
+ onkeydown="chatKeydown(event)"></textarea>
+ <button class="btn-primary chat-send-btn" id="btn-send-chat"
+ onclick="sendChatMessage()" disabled>Send</button>
+ </div>
+ </div>
+
+ <!-- Context Preview -->
+ <div class="panel-card" id="context-panel">
+ <div class="panel-title">Your Harness Context <span class="claim-tag">Your Encrypted Directives</span></div>
+ <div class="context-tabs" id="context-tabs"></div>
+ <div class="context-content" id="context-content">
+ <div class="context-placeholder">Your decrypted harness will appear here once loaded</div>
+ </div>
+ </div>
+
+ <!-- Audit Trail -->
+ <div class="panel-card audit-card" id="audit-panel">
+ <div class="panel-title">On-Chain Audit Trail <span class="claim-tag">Hedera Verified</span></div>
+ <div class="audit-log" id="audit-log">
+ <div class="audit-placeholder">Every session event is recorded on Hedera — immutable, tamper-proof</div>
+ </div>
+ </div>
+
+ </section>
+ </main>
+
+ <!-- Loading overlay -->
+ <div class="loading-overlay" id="loading" style="display:none">
+ <div class="loading-spinner"></div>
+ <div class="loading-text" id="loading-text">Working...</div>
+ </div>
+
+ <!-- Error toast -->
+ <div class="toast error-toast" id="error-toast"></div>
+
+ <!-- ── Auth modal ────────────────────────────────────────────────────────── -->
+ <div class="modal-overlay" id="auth-modal" style="display:none" data-mode="login">
+ <div class="modal-card">
+ <div class="modal-header">
+ <div class="modal-title">Welcome back, Commander.</div>
+ <div class="modal-subtitle">Sign in to load your harness.</div>
+ </div>
+ <div class="modal-tabs">
+ <button class="modal-tab active" id="auth-tab-login" onclick="window.switchAuthTab('login')">Log In</button>
+ <button class="modal-tab" id="auth-tab-signup" onclick="window.switchAuthTab('signup')">Sign Up</button>
+ </div>
+ <div class="modal-body">
+ <div class="field-row">
+ <label>Email</label>
+ <input type="email" id="auth-email" placeholder="you@example.com"
+ onkeydown="if(event.key==='Enter') window.submitAuth()" />
+ </div>
+ <div class="field-row">
+ <label>Password</label>
+ <input type="password" id="auth-password" placeholder="••••••••"
+ onkeydown="if(event.key==='Enter') window.submitAuth()" />
+ </div>
+ <div class="modal-error" id="auth-error"></div>
+ <button class="btn-primary" id="btn-auth-submit" onclick="window.submitAuth()">Log In</button>
+ </div>
+ </div>
+ </div>
+
+ <!-- ── Billing modal ─────────────────────────────────────────────────────── -->
+ <div class="modal-overlay" id="billing-modal" style="display:none">
+ <div class="modal-card">
+ <div class="modal-header">
+ <div class="modal-title">Get Your AI Harness</div>
+ <div class="modal-subtitle">You're in command from day one. One-time setup. Monthly access. Cancel anytime.</div>
+ </div>
+
+ <!-- Pricing breakdown -->
+ <div class="billing-pricing-breakdown">
+ <div class="billing-price-row">
+ <div class="billing-price-item">
+ <div class="billing-price-amount">$99</div>
+ <div class="billing-price-label">One-Time Setup</div>
+ <div class="billing-price-desc">Mints your harness on Hedera. Yours forever — even if you cancel.</div>
+ </div>
+ <div class="billing-price-plus">+</div>
+ <div class="billing-price-item">
+ <div class="billing-price-amount">$40<span class="billing-price-period">/mo</span></div>
+ <div class="billing-price-label">Monthly Access</div>
+ <div class="billing-price-desc">Keeps your harness live and your AI taking orders. Claude included. Cancel anytime.</div>
+ </div>
+ </div>
+ <div class="billing-power-note">
+ 🔑 <strong>Power users:</strong> Bring your own API keys to unlock additional AI models and reduce your costs.
+ </div>
+ </div>
+
+ <div class="modal-body">
+ <div class="billing-desc">
+ Secured by Stripe. All major cards accepted. Your $99 setup + first month billed today.
+ </div>
+ <button class="btn-primary" id="btn-stripe-checkout" onclick="window.startStripeCheckout()">
+ Get Started — Pay with Card →
+ </button>
+ <div class="modal-error" id="billing-error"></div>
+ </div>
+ </div>
+ </div>
+
+ <!-- ── API Keys Settings Modal ───────────────────────────────────────────── -->
+ <div class="modal-overlay" id="settings-modal" style="display:none">
+ <div class="modal-card settings-card">
+ <div class="modal-header">
+ <div class="modal-title">Power User Mode — Your API Keys</div>
+ <div class="modal-subtitle">Bring your own keys to unlock additional AI models. Encrypted at rest. Only you can use them.</div>
+ </div>
+ <div class="modal-body" id="settings-key-list">
+ <div class="settings-loading">Loading...</div>
+ </div>
+ <button class="btn-ghost" style="margin-top:16px;width:100%" onclick="closeApiKeysModal()">Close</button>
+ </div>
+ </div>
+
+ <script type="module" src="app.js"></script>
+</body>
+</html>

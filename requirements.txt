@@ -1,0 +1,20 @@
+hiero-sdk-python>=0.2.1
+cryptography>=42.0.0
+python-dotenv>=1.0.0
+pytest>=8.0.0
+web3>=6.0.0 # for Solidity contract interaction
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+httpx>=0.27.0 # for TestClient in tests + HBAR mirror node queries
+# ── Paywall / billing ──────────────────────────────────────────────────────────
+supabase>=2.0.0 # auth + subscriptions database
+stripe>=8.0.0 # card payment processing
+PyJWT>=2.8.0 # Supabase JWT verification
+# ── AI model providers ─────────────────────────────────────────────────────────
+openai>=1.0.0 # GPT-4o, GPT-4-turbo
+anthropic>=0.25.0 # Claude 3.5 Sonnet, Claude 3 Opus
+google-generativeai>=0.5.0 # Gemini 1.5 Pro, Gemini 1.5 Flash
+mistralai>=1.0.0 # Mistral Large, Mistral Small
+groq>=0.8.0 # Llama 3, Mixtral via Groq
+# ── Rate limiting ──────────────────────────────────────────────────────────────
+slowapi>=0.1.9 # slowapi: Starlette/FastAPI rate limiting (limiter.py)
