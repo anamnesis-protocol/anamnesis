@@ -82,6 +82,7 @@ class PackageMetadata:
  date: str # ISO date string (extracted or today)
  size: int # raw bytes
  file_id: str # HFS file ID (set after push)
+ bounded_context: str = "general" # Bounded context for domain organization
 
 
 def extract_date_from_name(name: str) -> str:

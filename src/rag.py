@@ -31,6 +31,7 @@ class PackageMetadata:
     date: str
     size: int
     file_id: str
+    bounded_context: str = "general"
 
 
 def tokenize(text: str) -> list[str]:
@@ -177,22 +178,25 @@ def rag_query_packages(
     packages: list[PackageMetadata],
     top_n: int = 5,
     threshold: float = 0.05,
+    contexts: Optional[list[str]] = None,
 ) -> list[tuple[float, PackageMetadata]]:
     """
     Query packages using TF-IDF relevance scoring.
     
     Process:
-    1. Tokenize all packages and the query
-    2. Compute IDF across all packages
-    3. Build TF-IDF vectors for query and each package
-    4. Rank packages by cosine similarity to query
-    5. Filter by threshold and return top N
+    1. Filter by bounded contexts if specified
+    2. Tokenize all packages and the query
+    3. Compute IDF across all packages
+    4. Build TF-IDF vectors for query and each package
+    5. Rank packages by cosine similarity to query
+    6. Filter by threshold and return top N
     
     Args:
         query: Natural language task description
         packages: List of package metadata to search
         top_n: Maximum results to return
         threshold: Minimum similarity score (0.0-1.0)
+        contexts: Optional list of bounded context names to filter by
         
     Returns:
         List of (similarity_score, package) tuples, sorted by score descending
@@ -204,9 +208,21 @@ def rag_query_packages(
         ...     print(f"{score:.3f} - {pkg.name}")
         0.847 - session_2026-03-16_hedera-contract-deploy
         0.623 - research_smart-contracts-hedera
+        
+        >>> # Filter by context
+        >>> results = rag_query_packages("deployment", packages, contexts=["hedera"])
     """
     if not packages:
         return []
+    
+    # Filter by bounded contexts if specified
+    if contexts:
+        packages = [
+            pkg for pkg in packages
+            if pkg.bounded_context in contexts
+        ]
+        if not packages:
+            return []
     
     # Tokenize query
     query_tokens = tokenize(query)

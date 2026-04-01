@@ -294,12 +294,15 @@ python scripts/session_manager.py continuity
 - Never lose context on what you were doing
 - Automatic session history archiving
 
-### Vault Section Metadata
+### Vault Health Monitoring
 
-Track vault section health with YAML frontmatter metadata:
+**Automated health monitoring** tracks vault health over time with alerts and trend analysis:
 
 ```bash
-# Check vault health
+# Show automated monitoring summary (runs check if 24+ hours since last)
+python scripts/vault_health.py --monitor
+
+# Manual health check
 python scripts/vault_health.py
 
 # Add metadata to sections without it
@@ -310,6 +313,27 @@ python scripts/vault_health.py --mark-reviewed
 
 # Show only stale sections
 python scripts/vault_health.py --stale
+```
+
+**Monitoring Features:**
+- Automated health checks (daily interval)
+- Health score trending (30-day analysis)
+- Alert generation (critical, warning, info)
+- Metrics history (last 100 checks)
+- Degradation detection
+
+**Alert Levels:**
+- 🔴 **Critical:** Health score < 50%
+- 🟡 **Warning:** Health score < 70% or 3+ stale sections
+- ℹ️ **Info:** Missing metadata
+
+### Vault Section Metadata
+
+Track vault section health with YAML frontmatter metadata:
+
+```bash
+# Check vault health
+python scripts/vault_health.py
 ```
 
 **Metadata Format:**
@@ -329,6 +353,55 @@ version: "1.0"
 - Track section lifecycle (created, updated, reviewed)
 - Tag-based organization
 - Health monitoring and reporting
+
+### Bounded Context Organization
+
+Organize memory packages into **domain-driven bounded contexts** for better knowledge management:
+
+```bash
+# List all available contexts
+python scripts/context_manager.py list
+
+# Suggest contexts for a package
+python scripts/context_manager.py suggest "hedera_nft_minting" \
+  --keywords hedera nft token hts \
+  --description "NFT minting on Hedera"
+
+# Show context statistics
+python scripts/context_manager.py stats
+
+# Assign context to package
+python scripts/context_manager.py assign "my_package" "hedera"
+```
+
+**Available Contexts:**
+- `ai_engineering` - AI/ML, LLMs, RAG, Agentic Systems
+- `architecture` - Software Architecture, Design Patterns, DDD
+- `python` - Python Programming, OOP, Testing
+- `hedera` - Hedera Hashgraph, HTS, HFS, HCS, Smart Contracts
+- `web3` - Blockchain, Web3, DeFi, NFTs
+- `frontend` - React, UI/UX, JavaScript
+- `backend` - APIs, Databases, Backend Services
+- `devops` - CI/CD, Docker, Kubernetes
+- `security` - Cryptography, Security, Authentication
+
+**RAG with Context Filtering:**
+```python
+from src.rag import rag_query_packages
+
+# Filter by specific contexts
+results = rag_query_packages(
+    "smart contract deployment",
+    packages,
+    contexts=["hedera", "web3"]  # Only search in these contexts
+)
+```
+
+**Benefits:**
+- Domain-driven organization
+- Faster, more relevant searches
+- Cross-domain knowledge discovery
+- Automatic context inference from keywords
 
 ### Using Different AI Models
 
