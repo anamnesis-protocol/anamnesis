@@ -13,7 +13,7 @@ Usage:
  python scripts/vault_pull.py --section soul --out . # pull and write soul.md
 
 Requirements:
- .env must contain: OPERATOR_ID, OPERATOR_KEY, SOUL_TOKEN_ID, VALIDATOR_CONTRACT_ID
+ .env must contain: OPERATOR_ID, OPERATOR_KEY, CONTEXT_TOKEN_ID, VALIDATOR_CONTRACT_ID
  vault_push.py must have been run at least once to create the on-chain index.
 """
 
@@ -31,8 +31,8 @@ from src.vault import (
  VAULT_ROOT,
  VAULT_SECTIONS,
  VAULT_DIRS,
- SOUL_TOKEN_ID,
- SOUL_TOKEN_SERIAL,
+ CONTEXT_TOKEN_ID,
+ CONTEXT_TOKEN_SERIAL,
  pull_all,
  pull_section,
  pull_dir_section,
@@ -54,8 +54,8 @@ def verify_contract_registration() -> str:
  Returns the registered index file_id.
  """
  contract_id = get_validator_contract_id()
- token_evm = token_id_to_evm_address(SOUL_TOKEN_ID)
- file_id = get_registered_file_id(contract_id, token_evm, SOUL_TOKEN_SERIAL)
+ token_evm = token_id_to_evm_address(CONTEXT_TOKEN_ID)
+ file_id = get_registered_file_id(contract_id, token_evm, CONTEXT_TOKEN_SERIAL)
 
  if file_id:
  print(f" Contract {contract_id}: index registered -> {file_id} [OK]")
@@ -73,7 +73,7 @@ def pull_one_section(section_name: str, out_dir: Path | None) -> None:
  print(f"Unknown section '{section_name}'. Valid: {list(VAULT_SECTIONS.keys())}")
  sys.exit(1)
 
- token_id = SOUL_TOKEN_ID
+ token_id = CONTEXT_TOKEN_ID
  key = get_vault_key(token_id)
 
  # Get section file_id from local index
@@ -118,7 +118,7 @@ def _pull_dir_sections(restore_root: Path) -> None:
  Each bundle is decrypted and unpacked to restore_root/Research/, etc.
  Use this for disaster recovery — restores working files from HFS.
  """
- token_id = SOUL_TOKEN_ID
+ token_id = CONTEXT_TOKEN_ID
  section_key = get_section_key(token_id)
  local = load_local_index()
  dir_ids: dict[str, str] = local.get("dir_sections", {})
@@ -206,7 +206,7 @@ Examples:
  print("=" * 60)
  print(" Hedera HFS -> Symbiote Vault (Pull)")
  print("=" * 60)
- print(f" Context token: {SOUL_TOKEN_ID}")
+ print(f" Context token: {CONTEXT_TOKEN_ID}")
 
  if args.verify_contract:
  print("\n[vault] Verifying contract registration...")
@@ -222,7 +222,7 @@ Examples:
  print("\n" + "=" * 60)
  print(" IDENTITY SECTIONS")
  print("=" * 60)
- print(f" Context token: {SOUL_TOKEN_ID}")
+ print(f" Context token: {CONTEXT_TOKEN_ID}")
  for section_name, content in result.items():
  print(f" {section_name:<15} {len(content):,} bytes")
  if out_dir:

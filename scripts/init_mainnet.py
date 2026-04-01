@@ -74,7 +74,7 @@ def check_prereqs(force: bool) -> None:
  print(f"[ERROR] {required} not set in .env")
  sys.exit(1)
 
- id_fields = ("HCS_TOPIC_ID", "SOUL_TOKEN_ID", "VALIDATOR_CONTRACT_ID")
+ id_fields = ("HCS_TOPIC_ID", "CONTEXT_TOKEN_ID", "VALIDATOR_CONTRACT_ID")
  already_set = {k: os.getenv(k, "").strip().strip("'\"") for k in id_fields if os.getenv(k, "").strip().strip("'\"")}
 
  if already_set and not force:
@@ -156,11 +156,11 @@ def step2_create_genesis_file() -> str:
 # Step 3: Mint SOUL NFT
 # ---------------------------------------------------------------------------
 
-def step3_mint_soul_token(genesis_file_id: str) -> str:
+def step3_mint_CONTEXT_TOKEN(genesis_file_id: str) -> str:
  print("[3/7] Minting SOUL NFT (immutable — no admin/supply key)...")
- from src.context_token import mint_soul_token
- token_id = mint_soul_token(context_file_id=genesis_file_id, companion_name="Symbiote")
- write_env("SOUL_TOKEN_ID", token_id)
+ from src.context_token import mint_CONTEXT_TOKEN
+ token_id = mint_CONTEXT_TOKEN(context_file_id=genesis_file_id, companion_name="Symbiote")
+ write_env("CONTEXT_TOKEN_ID", token_id)
  print(f" Context token: {token_id}\n")
  return token_id
 
@@ -238,8 +238,8 @@ def step7_register_and_verify(contract_id: str, vault_index_file_id: str) -> Non
  reload_env()
  from src.contract import register_file, token_id_to_evm_address, get_registered_file_id
 
- soul_token_id = os.environ["SOUL_TOKEN_ID"]
- token_evm = token_id_to_evm_address(soul_token_id)
+ CONTEXT_TOKEN_id = os.environ["CONTEXT_TOKEN_ID"]
+ token_evm = token_id_to_evm_address(CONTEXT_TOKEN_id)
 
  register_file(contract_id, token_evm, serial=1, file_id=vault_index_file_id)
 
@@ -306,11 +306,11 @@ Examples:
  genesis_file_id = step2_create_genesis_file()
 
  # Step 3
- token_id = os.getenv("SOUL_TOKEN_ID", "").strip().strip("'\"")
+ token_id = os.getenv("CONTEXT_TOKEN_ID", "").strip().strip("'\"")
  if token_id and args.resume:
  print(f"[3/7] Context token already set: {token_id} (skipping)")
  else:
- token_id = step3_mint_soul_token(genesis_file_id)
+ token_id = step3_mint_CONTEXT_TOKEN(genesis_file_id)
 
  # Step 4
  vault_index_file_id = step4_push_vault()

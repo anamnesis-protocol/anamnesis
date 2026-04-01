@@ -570,7 +570,7 @@ async function startProvision() {
 
  updateKDF(data.token_id, null);
  completeStep('provision');
- logAudit('SOUL_TOKEN_MINTED', `token=${data.token_id}`, 'event-session');
+ logAudit('CONTEXT_TOKEN_MINTED', `token=${data.token_id}`, 'event-session');
  logAudit('CHALLENGE_ISSUED', `expires=${new Date(data.expires_at).toLocaleTimeString()}`);
 
  unlockStep('sign');

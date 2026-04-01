@@ -223,11 +223,11 @@ The system uses TF-IDF (Term Frequency-Inverse Document Frequency) to intelligen
 
 ```python
 from src.memory_packages import query_packages, pull_package_index
-from src.vault import get_package_key, SOUL_TOKEN_ID
+from src.vault import get_package_key, CONTEXT_TOKEN_ID
 
 # Load your package index
-package_key = get_package_key(SOUL_TOKEN_ID)
-packages = pull_package_index(package_key, SOUL_TOKEN_ID)
+package_key = get_package_key(CONTEXT_TOKEN_ID)
+packages = pull_package_index(package_key, CONTEXT_TOKEN_ID)
 
 # Query by natural language
 results = query_packages(

@@ -88,8 +88,8 @@ _DIR_BUNDLE_EXTENSIONS: tuple[str, ...] = (".md",)
 VAULT_INDEX_CACHE = Path(__file__).parent.parent / ".vault_index.json"
 
 # Context token — Phase 1 uses serial 1
-SOUL_TOKEN_ID = os.environ.get("SOUL_TOKEN_ID", "0.0.8252163")
-SOUL_TOKEN_SERIAL = 1
+CONTEXT_TOKEN_ID = os.environ.get("CONTEXT_TOKEN_ID", "0.0.8252163")
+CONTEXT_TOKEN_SERIAL = 1
 
 # ---------------------------------------------------------------------------
 # HKDF info labels — purpose-separated key derivation
@@ -667,7 +667,7 @@ def push_all(force_new: bool = False) -> dict[str, str]:
  Encrypted JSON mapping all section names to HFS file IDs.
  Registered in ContextValidator contract under context token.
  """
- token_id = SOUL_TOKEN_ID
+ token_id = CONTEXT_TOKEN_ID
  print(f"\n[vault] Deriving purpose-separated keys for context token {token_id}...")
  section_key = get_section_key(token_id)
  index_key = get_index_key(token_id)
@@ -772,10 +772,10 @@ def push_all(force_new: bool = False) -> dict[str, str]:
  contract_id = get_validator_contract_id()
  if contract_id:
  token_evm = token_id_to_evm_address(token_id)
- registered = get_registered_file_id(contract_id, token_evm, SOUL_TOKEN_SERIAL)
+ registered = get_registered_file_id(contract_id, token_evm, CONTEXT_TOKEN_SERIAL)
  if registered != index_file_id:
  print(f"\n[vault] Registering index in contract {contract_id}...")
- register_file(contract_id, token_evm, SOUL_TOKEN_SERIAL, index_file_id)
+ register_file(contract_id, token_evm, CONTEXT_TOKEN_SERIAL, index_file_id)
  else:
  print(f"\n[vault] Index already registered in contract ({index_file_id})")
  else:
@@ -783,7 +783,7 @@ def push_all(force_new: bool = False) -> dict[str, str]:
 
  cache_data = {
  "token_id": token_id,
- "serial": SOUL_TOKEN_SERIAL,
+ "serial": CONTEXT_TOKEN_SERIAL,
  "index_file_id": index_file_id,
  "sections": section_file_ids,
  "section_hashes": current_hashes,
@@ -840,7 +840,7 @@ def pull_all(output_dir: Path | None = None) -> dict[str, bytes]:
  - index_key (get_index_key) for the vault index JSON
  - section_key (get_section_key) for vault section content
  """
- token_id = SOUL_TOKEN_ID
+ token_id = CONTEXT_TOKEN_ID
  print(f"\n[vault] Deriving purpose-separated keys for context token {token_id}...")
  section_key = get_section_key(token_id)
  index_key = get_index_key(token_id)
@@ -852,7 +852,7 @@ def pull_all(output_dir: Path | None = None) -> dict[str, bytes]:
  print("[vault] No local cache — fetching index file_id from contract...")
  contract_id = get_validator_contract_id()
  token_evm = token_id_to_evm_address(token_id)
- index_file_id = get_registered_file_id(contract_id, token_evm, SOUL_TOKEN_SERIAL)
+ index_file_id = get_registered_file_id(contract_id, token_evm, CONTEXT_TOKEN_SERIAL)
  if not index_file_id:
  raise RuntimeError("No vault index registered in contract. Run vault_push first.")
 

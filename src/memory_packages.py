@@ -49,7 +49,7 @@ from src.crypto import compress, decompress
 from src.vault import (
  get_package_key, get_index_key,
  _make_package_aad, _make_package_index_aad, _make_index_aad,
- load_local_index, save_local_index, SOUL_TOKEN_ID, verify_content,
+ load_local_index, save_local_index, CONTEXT_TOKEN_ID, verify_content,
 )
 from src.event_log import log_event
 
@@ -433,7 +433,7 @@ def push_all_packages(
  Returns:
  HFS file_id of the package index
  """
- token_id = SOUL_TOKEN_ID
+ token_id = CONTEXT_TOKEN_ID
  package_key = get_package_key(token_id) # encrypts individual packages + package index
  index_key = get_index_key(token_id) # encrypts the vault index (shared with vault.py)
  local = load_local_index()
