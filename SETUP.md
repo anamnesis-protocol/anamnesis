@@ -257,6 +257,43 @@ for score, pkg in results:
 - Higher threshold (0.1-0.3) for precise matches
 - Set `use_rag=False` for simple keyword matching (faster but less accurate)
 
+### Session State Tracking
+
+Track work continuity across sessions with persistent session state:
+
+```bash
+# Start a new session
+python scripts/session_manager.py start "Implementing features" "Working on context-sovereignty"
+
+# Check current status
+python scripts/session_manager.py status
+
+# Add a project
+python scripts/session_manager.py add-project "context-sovereignty" --priority 1
+
+# Update next actions
+python scripts/session_manager.py next-actions "Complete tests" "Update docs" "Deploy"
+
+# End session
+python scripts/session_manager.py end "Completed feature implementation" --duration 120
+
+# Get continuity summary for next session
+python scripts/session_manager.py continuity
+```
+
+**Session State Includes:**
+- Current task and context
+- Next actions list
+- Active projects with priorities
+- Recent session history
+- Total session count and hours
+
+**Benefits:**
+- Seamless continuity between sessions
+- Track project progress over time
+- Never lose context on what you were doing
+- Automatic session history archiving
+
 ### Vault Section Metadata
 
 Track vault section health with YAML frontmatter metadata:

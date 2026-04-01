@@ -27,6 +27,7 @@ from src.metadata import (
     generate_health_report,
     get_stale_sections,
 )
+from src.vault_monitor import VaultMonitor, should_run_check
 
 
 def load_local_sections() -> dict[str, str]:
@@ -142,11 +143,35 @@ def mark_all_reviewed(sections: dict[str, str]) -> None:
     print(f"\n✅ Marked {updated} section(s) as reviewed")
 
 
+def show_monitoring_summary(sections: dict[str, str]) -> None:
+    """Show automated monitoring summary."""
+    from pathlib import Path
+    metrics_file = Path(__file__).parent.parent / ".vault_metrics.json"
+    
+    monitor = VaultMonitor(metrics_file)
+    
+    # Run check if needed
+    if should_run_check(metrics_file, interval_hours=24):
+        print("🔄 Running automated health check...")
+        monitor.run_health_check(sections)
+    
+    print("\n" + monitor.get_summary())
+    
+    # Show active alerts
+    active_alerts = monitor.get_active_alerts()
+    if active_alerts:
+        print("\n⚠️  Active Alerts:")
+        for alert in active_alerts[:5]:  # Show top 5
+            emoji = {"critical": "🔴", "warning": "🟡", "info": "ℹ️"}.get(alert.severity, "")
+            print(f"   {emoji} [{alert.severity.upper()}] {alert.message}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Vault health check and metadata management")
     parser.add_argument("--add-metadata", action="store_true", help="Add metadata to sections without it")
     parser.add_argument("--mark-reviewed", action="store_true", help="Mark all sections as reviewed today")
     parser.add_argument("--stale", action="store_true", help="Show only stale sections")
+    parser.add_argument("--monitor", action="store_true", help="Show automated monitoring summary")
     
     args = parser.parse_args()
     
@@ -165,6 +190,8 @@ def main():
         mark_all_reviewed(sections)
     elif args.stale:
         show_stale_only(sections)
+    elif args.monitor:
+        show_monitoring_summary(sections)
     else:
         show_health_report(sections)
     
