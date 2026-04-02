@@ -250,3 +250,89 @@ Content
     assert report["active"] >= 1
     assert report["stale"] >= 1
     assert 0 <= report["health_score"] <= 100
+
+
+def test_metadata_is_stale_invalid_date():
+    """Test staleness with invalid date format."""
+    metadata = SectionMetadata(
+        tags=["#status/active"],
+        created="2026-01-01",
+        last_updated="2026-01-01",
+        last_reviewed="invalid-date",
+        status="active",
+    )
+    # Invalid date should be treated as stale
+    assert metadata.is_stale(90)
+
+
+def test_parse_frontmatter_empty_yaml():
+    """Test parsing frontmatter with empty YAML."""
+    content = """---
+---
+# Content"""
+    metadata, body = parse_frontmatter(content)
+    # Empty YAML should return None
+    assert metadata is None
+    assert body == content
+
+
+def test_parse_frontmatter_invalid_yaml():
+    """Test parsing frontmatter with invalid YAML."""
+    content = """---
+invalid: yaml: structure: here
+---
+# Content"""
+    metadata, body = parse_frontmatter(content)
+    # Invalid YAML should return None and original content
+    assert metadata is None
+    assert body == content
+
+
+def test_get_stale_sections_with_parse_errors():
+    """Test get_stale_sections handles parse errors gracefully."""
+    sections = {
+        "valid": """---
+tags: ["#status/active"]
+created: "2026-04-01"
+last_updated: "2026-04-01"
+last_reviewed: "{}"
+status: "active"
+version: "1.0"
+---
+Content
+""".format(datetime.now().date().isoformat()),
+        "invalid_yaml": """---
+bad: yaml: structure
+---
+Content""",
+    }
+    
+    stale = get_stale_sections(sections, threshold_days=90)
+    # Should handle parse error and still return results
+    assert isinstance(stale, list)
+
+
+def test_generate_health_report_with_parse_errors():
+    """Test health report handles parse errors gracefully."""
+    sections = {
+        "valid": """---
+tags: ["#status/active"]
+created: "2026-04-01"
+last_updated: "2026-04-01"
+last_reviewed: "{}"
+status: "active"
+version: "1.0"
+---
+Content
+""".format(datetime.now().date().isoformat()),
+        "invalid_yaml": """---
+bad yaml
+---
+Content""",
+        "corrupted": "---\n" + "x" * 10000,  # Very long invalid content
+    }
+    
+    report = generate_health_report(sections)
+    # Should handle errors and still generate report
+    assert "total_sections" in report
+    assert report["total_sections"] == 3
