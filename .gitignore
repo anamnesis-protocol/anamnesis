@@ -14,3 +14,5 @@ index/
 *.pem
 .vault_index.json
 .session_start_hashes.json
+htmlcov/
+.coverage

@@ -31,7 +31,7 @@ from api.middleware.auth import require_subscription
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.crypto import make_challenge, derive_key
-from src.context_token import mint_soul_token
+from src.context_token import mint_contextext_token
 from src.vault import (
  push_section,
  push_index,
