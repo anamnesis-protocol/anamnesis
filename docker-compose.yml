@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sovereign-ai-api
+    ports:
+      - "8000:8000"
+    environment:
+      # Hedera Configuration
+      - OPERATOR_ID=${OPERATOR_ID}
+      - OPERATOR_KEY=${OPERATOR_KEY}
+      - TREASURY_ID=${TREASURY_ID}
+      - TREASURY_KEY=${TREASURY_KEY}
+      - HEDERA_NETWORK=${HEDERA_NETWORK:-testnet}
+      - HCS_TOPIC_ID=${HCS_TOPIC_ID}
+      - VALIDATOR_CONTRACT_ID=${VALIDATOR_CONTRACT_ID}
+      # Database Configuration
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/sovereign_ai
+      # API Configuration
+      - API_ENV=${API_ENV:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    env_file:
+      - .env
+    volumes:
+      # Mount source for development hot-reload
+      - ./src:/app/src
+      - ./api:/app/api
+      - ./scripts:/app/scripts
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: sovereign-ai-db
+    environment:
+      - POSTGRES_DB=sovereign_ai
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Optional: Add init scripts
+      # - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge

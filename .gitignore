@@ -16,3 +16,4 @@ index/
 .session_start_hashes.json
 htmlcov/
 .coverage
+.cascade/
