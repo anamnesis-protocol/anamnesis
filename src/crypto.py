@@ -78,9 +78,9 @@ def decompress(data: bytes) -> bytes:
  Returns:
  Decompressed plaintext bytes
  """
- if data[:2] == _GZIP_MAGIC:
- return gzip.decompress(data)
- return data # Not compressed — pass through (backward compat)
+    if data[:2] == _GZIP_MAGIC:
+        return gzip.decompress(data)
+    return data # Not compressed — pass through (backward compat)
 
 
 def derive_key(token_id: str, wallet_signature: bytes, info: bytes | None = None) -> bytes:
