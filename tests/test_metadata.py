@@ -396,5 +396,5 @@ Content""",
     # Should handle invalid dates gracefully
     assert "total_sections" in report
     assert report["stale"] >= 1
-    # Check stale_list has entries with 999 marker for invalid dates
-    assert len(report["stale_list"]) >= 1
+    # Both sections should be marked as stale due to invalid dates
+    assert report["stale"] == 2
