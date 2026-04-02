@@ -389,6 +389,15 @@ status: "active"
 version: "1.0"
 ---
 Content""",
+        "stale3": """---
+tags: ["#status/active"]
+created: "2020-01-01"
+last_updated: "2020-01-01"
+last_reviewed: "2020-01-01"
+status: "active"
+version: "1.0"
+---
+Content""",
         "no_meta": "# No metadata",
     }
     
