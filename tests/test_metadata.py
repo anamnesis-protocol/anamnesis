@@ -336,3 +336,65 @@ Content""",
     # Should handle errors and still generate report
     assert "total_sections" in report
     assert report["total_sections"] == 3
+
+
+def test_get_stale_sections_with_invalid_dates():
+    """Test get_stale_sections handles invalid dates in metadata."""
+    sections = {
+        "invalid_date": """---
+tags: ["#status/active"]
+created: "2026-04-01"
+last_updated: "2026-04-01"
+last_reviewed: "not-a-valid-date"
+status: "active"
+version: "1.0"
+---
+Content""",
+        "none_date": """---
+tags: ["#status/active"]
+created: "2026-04-01"
+last_updated: "2026-04-01"
+last_reviewed: null
+status: "active"
+version: "1.0"
+---
+Content""",
+    }
+    
+    stale = get_stale_sections(sections, threshold_days=90)
+    # Should handle invalid dates and mark as stale with 999 days
+    assert len(stale) == 2
+    # Check that invalid dates get 999 days marker
+    days_markers = [days for _, days in stale]
+    assert 999 in days_markers
+
+
+def test_generate_health_report_with_invalid_dates():
+    """Test health report handles invalid dates in stale detection."""
+    sections = {
+        "invalid_date": """---
+tags: ["#status/active"]
+created: "2026-04-01"
+last_updated: "2026-04-01"
+last_reviewed: "invalid-date-format"
+status: "active"
+version: "1.0"
+---
+Content""",
+        "archived_invalid": """---
+tags: ["#status/archived"]
+created: "2026-04-01"
+last_updated: "2026-04-01"
+last_reviewed: null
+status: "archived"
+version: "1.0"
+---
+Content""",
+    }
+    
+    report = generate_health_report(sections)
+    # Should handle invalid dates gracefully
+    assert "total_sections" in report
+    assert report["stale"] >= 1
+    # Check stale_list has entries with 999 marker for invalid dates
+    assert len(report["stale_list"]) >= 1
