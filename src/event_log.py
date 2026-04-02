@@ -61,16 +61,19 @@ def log_event(event_type: str, payload: dict, topic_id: str | None = None) -> st
  Returns:
  topic_id used (empty string if topic not configured)
  """
- if topic_id is None:
- topic_id = os.environ.get("HCS_TOPIC_ID")
- if not topic_id:
- return "" # Graceful degradation — topic not yet created
+    if topic_id is None:
+        topic_id = os.environ.get("HCS_TOPIC_ID")
+    if not topic_id:
+        return "" # Graceful degradation — topic not yet created
 
- client = get_client()
- _, treasury_key = get_treasury()
+    client = get_client()
+    _, treasury_key = get_treasury()
 
- message = json.dumps({
- "event_type": event_type,
+    message = json.dumps({
+        "event_type": event_type,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "payload": payload,
+    }, separators=(",", ":"))
  "timestamp": datetime.now(timezone.utc).isoformat(),
  "payload": payload,
  }, separators=(",", ":"))
