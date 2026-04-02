@@ -2,11 +2,11 @@
 crypto.py — Key Derivation and Context Encryption
 
 Implements :
- KDF(soul_token_id + wallet_signature) -> decryption_key
+ KDF(context_token_id + wallet_signature) -> decryption_key
 
 Design decisions:
 - KDF: HKDF-SHA256 (RFC 5869). Deterministic. No stored state.
-- Inputs: soul_token_id (bytes) + wallet_signature (bytes from signing a challenge)
+- Inputs: context_token_id (bytes) + wallet_signature (bytes from signing a challenge)
 - Salt: SHA256(token_id) — token-specific, public, reproducible
 - Info: b"sovereign-ai-context-v1" — domain separation
 - Output: 32 bytes -> AES-256-GCM key
