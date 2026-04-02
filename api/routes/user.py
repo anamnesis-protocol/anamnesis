@@ -154,7 +154,7 @@ def provision_start(
 
  # Mint the context token (placeholder context_file_id — updated after vault creation)
  try:
- token_id = mint_soul_token(
+ token_id = mint_context_token(
  context_file_id="pending",
  companion_name=req.companion_name,
  )

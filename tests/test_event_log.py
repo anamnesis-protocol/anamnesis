@@ -17,7 +17,7 @@ class TestEventLogStructure:
  import json
  from datetime import datetime, timezone
 
- event_type = "SOUL_TOKEN_MINTED"
+ event_type = "CONTEXT_TOKEN_MINTED"
  payload = {"token_id": "0.0.67890", "serial": 1}
 
  message = json.dumps({

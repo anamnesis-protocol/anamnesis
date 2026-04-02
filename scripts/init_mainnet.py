@@ -153,11 +153,11 @@ def step2_create_genesis_file() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Step 3: Mint SOUL NFT
+# Step 3: Mint CONTEXT TOKEN
 # ---------------------------------------------------------------------------
 
 def step3_mint_CONTEXT_TOKEN(genesis_file_id: str) -> str:
- print("[3/7] Minting SOUL NFT (immutable — no admin/supply key)...")
+ print("[3/7] Minting CONTEXT TOKEN (immutable — no admin/supply key)...")
  from src.context_token import mint_CONTEXT_TOKEN
  token_id = mint_CONTEXT_TOKEN(context_file_id=genesis_file_id, companion_name="Symbiote")
  write_env("CONTEXT_TOKEN_ID", token_id)

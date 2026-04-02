@@ -54,9 +54,9 @@ def log_event(event_type: str, payload: dict, topic_id: str | None = None) -> st
  Submit a structured event to the HCS audit topic.
 
  Args:
- event_type: String label (SOUL_TOKEN_MINTED, CONTEXT_STORED, CONTEXT_LOADED, etc.)
- payload: Dict of event-specific fields
- topic_id: HCS topic ID. Falls back to HCS_TOPIC_ID env var.
+    event_type: String label (CONTEXT_TOKEN_MINTED, CONTEXT_STORED, CONTEXT_LOADED, etc.)
+    payload: Dict of event-specific fields
+    topic_id: HCS topic ID. Falls back to HCS_TOPIC_ID env var.
 
  Returns:
  topic_id used (empty string if topic not configured)

@@ -33,8 +33,8 @@ SECTION_FILE_IDS = {
 # ---------------------------------------------------------------------------
 
 def _mock_provision_start(mocker, token_id: str = TOKEN_ID) -> None:
- """Mock mint_soul_token to return a fixed token_id."""
- mocker.patch("api.routes.user.mint_soul_token", return_value=token_id)
+ """Mock mint_context_token to return a fixed token_id."""
+ mocker.patch("api.routes.user.mint_context_token", return_value=token_id)
  mocker.patch("api.routes.user.log_event", return_value="")
 
 
@@ -84,7 +84,7 @@ class TestProvisionStart:
  assert session_resp.json()["challenge_hex"] == data["challenge_hex"]
 
  def test_mint_failure_returns_502(self, mocker):
- mocker.patch("api.routes.user.mint_soul_token", side_effect=Exception("Hedera down"))
+    mocker.patch("api.routes.user.mint_context_token", side_effect=Exception("Hedera down"))
  resp = client.post("/user/provision/start", json={
  "account_id": ACCOUNT_ID,
  "companion_name": COMPANION,

@@ -1,7 +1,7 @@
 """
 api/provision_store.py — In-memory store for pending user provisioning.
 
-Tracks soul tokens that have been minted (via /provision/start) but whose
+Tracks context tokens that have been minted (via /provision/start) but whose
 vault has not yet been created (awaiting /provision/complete).
 
 TTL: 1 hour — if the user doesn't complete within 1 hour, the pending record

@@ -2,7 +2,7 @@
 api/models.py — Pydantic request/response models for the Sovereign AI SaaS API.
 
 Session open flow:
- 1. Client calls /session/challenge with their soul_token_id
+ 1. Client calls /session/challenge with their context_token_id
  2. Client's wallet signs the returned challenge bytes
  3. Client calls /session/open with token_id + wallet_signature_hex
  Server derives key: HKDF(token_id || wallet_sig)
