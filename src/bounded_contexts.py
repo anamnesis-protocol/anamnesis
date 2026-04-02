@@ -2,7 +2,7 @@
 bounded_contexts.py — Bounded Context Organization for Memory Packages
 
 Implements domain-driven design bounded contexts for organizing memory packages.
-Inspired by Symbiosis vault's 9 bounded contexts for knowledge organization.
+Uses 9 bounded contexts for comprehensive knowledge organization.
 
 Bounded Contexts:
 - ai_engineering: MCP, Agentic AI, RAG, LLM, Prompts, GenAI

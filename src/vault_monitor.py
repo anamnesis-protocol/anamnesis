@@ -2,7 +2,7 @@
 vault_monitor.py — Automated Vault Health Monitoring
 
 Implements automated health checks and monitoring for vault sections.
-Inspired by Symbiosis vault-health-check.py with enhanced automation.
+Provides enhanced automation for vault health tracking.
 
 Features:
 - Automated health checks on schedule

@@ -103,7 +103,7 @@ print(f"Current task: {loaded.current_task}")
 
 ---
 
-## 📦 Integration with Symbiote Vault
+## 📦 Integration with Your Vault
 
 ### Option 1: Test in Sovereign-AI-Context Repo
 ```bash
@@ -111,17 +111,17 @@ cd d:\code\sovereign-ai-context
 python -m pytest tests/ -v  # Run all 89 tests
 ```
 
-### Option 2: Deploy to Symbiote Vault
+### Option 2: Deploy to Your Vault
 ```bash
-# Copy modules to symbiote vault
-cp d:\code\sovereign-ai-context\src\bounded_contexts.py d:\symbiote_suit\
-cp d:\code\sovereign-ai-context\src\metadata.py d:\symbiote_suit\
-cp d:\code\sovereign-ai-context\src\vault_monitor.py d:\symbiote_suit\
-cp d:\code\sovereign-ai-context\src\rag.py d:\symbiote_suit\
-cp d:\code\sovereign-ai-context\src\session_state.py d:\symbiote_suit\
+# Copy modules to your vault directory
+cp d:\code\sovereign-ai-context\src\bounded_contexts.py <your_vault_path>\
+cp d:\code\sovereign-ai-context\src\metadata.py <your_vault_path>\
+cp d:\code\sovereign-ai-context\src\vault_monitor.py <your_vault_path>\
+cp d:\code\sovereign-ai-context\src\rag.py <your_vault_path>\
+cp d:\code\sovereign-ai-context\src\session_state.py <your_vault_path>\
 
 # Test in vault context
-cd d:\symbiote_suit
+cd <your_vault_path>
 python -c "from bounded_contexts import suggest_contexts; print(suggest_contexts('AI task'))"
 ```
 
@@ -129,7 +129,7 @@ python -c "from bounded_contexts import suggest_contexts; print(suggest_contexts
 
 ## 🔍 Health Check Your Vault
 
-Run a full health check on your Symbiote vault:
+Run a full health check on your vault:
 
 ```python
 from pathlib import Path
@@ -137,7 +137,7 @@ from src.vault_monitor import VaultMonitor
 from src.metadata import generate_health_report
 
 # Load all vault sections
-vault_path = Path("d:/symbiote_suit/Knowledge")
+vault_path = Path("<your_vault_path>/Knowledge")
 sections = {}
 
 for md_file in vault_path.glob("**/*.md"):

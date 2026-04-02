@@ -2,7 +2,7 @@
 rag.py — TF-IDF based RAG for memory package relevance scoring
 
 Implements relevance-gated memory package loading using TF-IDF vectorization.
-Inspired by symbiote-rag but adapted for encrypted Hedera-stored packages.
+Adapted for encrypted Hedera-stored packages.
 
 Architecture:
 - Build TF-IDF vectors from package metadata (name, description, keywords)

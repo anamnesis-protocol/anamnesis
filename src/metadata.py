@@ -1,8 +1,8 @@
 """
 metadata.py — Vault Section Metadata Management
 
-Implements YAML frontmatter metadata tracking for vault sections.
-Inspired by Symbiosis vault architecture for better organization and staleness detection.
+YAML frontmatter-based metadata for vault sections.
+Provides organization and staleness detection for vault content.
 
 Metadata Schema:
 ---

@@ -1,7 +1,7 @@
 """
 session_state.py — Session State Tracking and Persistence
 
-Implements session state management inspired by Symbiosis vault architecture.
+Implements session state management for vault architecture.
 Tracks current work, context, and continuity across sessions.
 
 Session State Schema:

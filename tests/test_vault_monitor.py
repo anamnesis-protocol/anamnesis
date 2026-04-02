@@ -371,16 +371,6 @@ Content""",
 def test_generate_alerts_warning():
     """Test warning alert generation when health score < 70."""
     sections = {
-        "active": """---
-tags: ["#status/active"]
-created: "2026-04-01"
-last_updated: "2026-04-01"
-last_reviewed: "{}"
-status: "active"
-version: "1.0"
----
-Content
-""".format(datetime.now().date().isoformat()),
         "stale1": """---
 tags: ["#status/active"]
 created: "2020-01-01"
@@ -390,6 +380,16 @@ status: "active"
 version: "1.0"
 ---
 Content""",
+        "stale2": """---
+tags: ["#status/active"]
+created: "2020-01-01"
+last_updated: "2020-01-01"
+last_reviewed: "2020-01-01"
+status: "active"
+version: "1.0"
+---
+Content""",
+        "no_meta": "# No metadata",
     }
     
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -398,9 +398,10 @@ Content""",
         
         metric = monitor.run_health_check(sections)
         
-        # Should generate warning for stale content
+        # Should generate warning for stale content (3+ stale sections)
         warning_alerts = [a for a in monitor.alerts if a.severity == "warning"]
         assert len(warning_alerts) > 0
+        assert metric.stale_count >= 3
 
 
 def test_load_history_corrupted_file():
