@@ -44,34 +44,32 @@ from src.contract import (
 from src.event_log import log_event
 
 # ---------------------------------------------------------------------------
-# Vault root — the Symbiote Vault directory
+# Vault root — configurable per user via env var
 # ---------------------------------------------------------------------------
-VAULT_ROOT = Path(r"D:\symbiote_suit")
+VAULT_ROOT = Path(os.environ.get("VAULT_ROOT", str(Path.home() / "vault")))
 
-# Phase 1 sections: section_name -> relative path from VAULT_ROOT
-VAULT_SECTIONS: dict[str, str] = {
-    "soul": "Knowledge/SOUL.md",
-    "user": "Personas/USER.md",
-    "symbiote": "Personas/Symbiote.md",
-    "session_state": "System/Session-State.md",
-}
+# Core sections: section_name -> relative path from VAULT_ROOT
+# Defaults are generic flat paths. Override via VAULT_SECTIONS_JSON env var
+# (JSON object mapping section names to relative paths).
+_sections_override = os.environ.get("VAULT_SECTIONS_JSON")
+VAULT_SECTIONS: dict[str, str] = (
+    json.loads(_sections_override)
+    if _sections_override
+    else {
+        "soul": "soul.md",
+        "user": "user.md",
+        "symbiote": "symbiote.md",
+        "session_state": "session_state.md",
+    }
+)
 
-# Phase 2 directory bundles: section_name -> relative directory path from VAULT_ROOT
-VAULT_DIRS: dict[str, str] = {
-    "dir:research": "Research",
-    "dir:projects": "02 - Projects",
-    "dir:system": "System",
-    "dir:knowledge": "Knowledge",
-    "dir:stack": "Stack",
-    "dir:personas": "Personas",
-    "dir:archive": "Archive",
-    "dir:root-files": ".",
-}
+# Directory bundles: section_name -> relative directory path from VAULT_ROOT
+# Empty by default — populate via VAULT_DIRS_JSON env var if needed.
+_dirs_override = os.environ.get("VAULT_DIRS_JSON")
+VAULT_DIRS: dict[str, str] = json.loads(_dirs_override) if _dirs_override else {}
 
 # Per-directory push options
-VAULT_DIR_OPTIONS: dict[str, dict] = {
-    "dir:root-files": {"recursive": False},
-}
+VAULT_DIR_OPTIONS: dict[str, dict] = {}
 
 # File extensions included in directory bundles
 _DIR_BUNDLE_EXTENSIONS: tuple[str, ...] = (".md",)
@@ -79,8 +77,8 @@ _DIR_BUNDLE_EXTENSIONS: tuple[str, ...] = (".md",)
 # Local cache of the vault index (file_id mapping)
 VAULT_INDEX_CACHE = Path(__file__).parent.parent / ".vault_index.json"
 
-# Context token — Phase 1 uses serial 1
-CONTEXT_TOKEN_ID = os.environ.get("CONTEXT_TOKEN_ID", "0.0.8252163")
+# Context token — must be set via env var; no Drake default
+CONTEXT_TOKEN_ID = os.environ.get("CONTEXT_TOKEN_ID", "")
 CONTEXT_TOKEN_SERIAL = 1
 
 # ---------------------------------------------------------------------------
