@@ -50,7 +50,7 @@ from api.models import (
     SessionCloseRequest,
     SessionCloseResponse,
 )
-from api.session_store import create_session, get_session, close_session
+from api.session_store import create_session, get_session, close_session, get_lock_holder
 
 # HKDF info labels — must match vault.py exactly
 _INFO_SECTION = b"sovereign-ai-section-v1"
@@ -241,6 +241,17 @@ def open_session(
                 status_code=403,
                 detail=f"Section '{section_name}' failed integrity check: {exc}",
             )
+
+    # ---- Check vault lock — one active session per token_id ----
+    existing_holder = get_lock_holder(token_id)
+    if existing_holder:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Vault '{token_id}' already has an active session. "
+                "Call POST /session/close to end the existing session before opening a new one."
+            ),
+        )
 
     # ---- Build session ----
     # Keys are stored as bytearray in the session store so they can be explicitly
