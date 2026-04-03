@@ -35,7 +35,7 @@ from src.event_log import log_event
 
 def mint_context_token(
  context_file_id: str,
- companion_name: str = "Symbiote",
+ companion_name: str = "Assistant",
 ) -> str:
  """
  Mint a single immutable HTS NFT context token.

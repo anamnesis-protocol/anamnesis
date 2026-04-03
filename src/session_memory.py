@@ -17,7 +17,7 @@ Flow:
 Usage:
  from src.session_memory import create_memory_token, mint_memory, transfer_memory
 
- memory_token_id = create_memory_token(companion_name="Symbiote")
+ memory_token_id = create_memory_token(companion_name="Assistant")
  mint_memory(memory_token_id, amount=1)
  transfer_memory(memory_token_id, to_account="0.0.99999", amount=1)
 """

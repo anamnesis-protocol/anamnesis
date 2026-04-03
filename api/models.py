@@ -98,7 +98,7 @@ class ProvisionStartRequest(BaseModel):
  "Context token will be minted under the operator treasury and associated to this account."
  )
  companion_name: str = Field(
- default="Symbiote",
+ default="Assistant",
  description="Name for the AI companion (used in context token metadata and default vault content).",
  )
 

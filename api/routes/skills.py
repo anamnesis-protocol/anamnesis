@@ -2,7 +2,7 @@
 api/routes/skills.py — Skill package CRUD endpoints.
 
 Skill packages are encrypted MCP tool definitions stored in the user's vault.
-When Drake learns a task, it packages the knowledge as a skill → stored encrypted
+When the AI learns a task, it packages the knowledge as a skill → stored encrypted
 on HFS → loaded dynamically at session open → any AI model picks it up without re-teaching.
 
 Endpoints:

@@ -159,7 +159,7 @@ def reload_env() -> None:
                     def step3_mint_CONTEXT_TOKEN(genesis_file_id: str) -> str:
                         print("[3/7] Minting CONTEXT TOKEN (immutable — no admin/supply key)...")
                         from src.context_token import mint_CONTEXT_TOKEN
-                        token_id = mint_CONTEXT_TOKEN(context_file_id=genesis_file_id, companion_name="Symbiote")
+                        token_id = mint_CONTEXT_TOKEN(context_file_id=genesis_file_id, companion_name="Assistant")
                         write_env("CONTEXT_TOKEN_ID", token_id)
                         print(f" Context token: {token_id}\n")
                         return token_id
