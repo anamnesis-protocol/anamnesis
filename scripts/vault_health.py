@@ -108,7 +108,7 @@ def add_metadata_to_sections(sections: dict[str, str]) -> None:
             
             # Determine tags based on section name
             tags = ["#status/active"]
-            if "soul" in name or "user" in name or "symbiote" in name:
+            if "harness" in name or "profile" in name or "config" in name:
                 tags.append("#type/identity")
             elif "session" in name:
                 tags.append("#type/session")

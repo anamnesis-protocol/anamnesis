@@ -56,7 +56,7 @@ _INFO_SECTION = b"sovereign-ai-section-v1"
 _INFO_INDEX = b"sovereign-ai-index-v1"
 
 # Identity section names to create at provision time
-_PROVISION_SECTIONS = ["soul", "user", "symbiote", "session_state"]
+_PROVISION_SECTIONS = ["harness", "user", "config", "session_state"]
 
 router = APIRouter(prefix="/user", tags=["user"])
 
@@ -71,7 +71,7 @@ def _default_sections(token_id: str, account_id: str, companion_name: str, creat
     These are starting templates — the user customizes them post-provision.
     """
     return {
-        "soul": f"""# Harness Core
+        "harness": f"""# Harness Directives
 
 **Token:** {token_id}
 **Account:** {account_id}
@@ -97,7 +97,7 @@ The more you put in, the better AI understands how to serve you.
 [Status: NEW — awaiting customization]
 """.encode("utf-8"),
 
-        "symbiote": f"""# AI Configuration
+        "config": f"""# AI Configuration
 
 **Name:** {companion_name}
 **Token:** {token_id}

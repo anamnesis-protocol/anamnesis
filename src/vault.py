@@ -56,9 +56,9 @@ VAULT_SECTIONS: dict[str, str] = (
     json.loads(_sections_override)
     if _sections_override
     else {
-        "soul": "soul.md",
+        "harness": "harness.md",
         "user": "user.md",
-        "symbiote": "symbiote.md",
+        "config": "config.md",
         "session_state": "session_state.md",
     }
 )
