@@ -46,198 +46,198 @@ _HEDERA_ID_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
 
 def _validate_file_id(file_id: str) -> None:
- """Reject malformed file_id strings before they reach the Hedera SDK."""
- if not file_id or not _HEDERA_ID_RE.match(file_id):
- raise ValueError(
- f"[context_storage] Invalid file_id: {file_id!r}. "
- "Expected Hedera ID format '0.0.XXXXX'."
- )
+    """Reject malformed file_id strings before they reach the Hedera SDK."""
+    if not file_id or not _HEDERA_ID_RE.match(file_id):
+        raise ValueError(
+            f"[context_storage] Invalid file_id: {file_id!r}. "
+            "Expected Hedera ID format '0.0.XXXXX'."
+        )
 
 
 def store_context(key: bytes, plaintext: bytes, token_id: str = "", aad: bytes | None = None) -> str:
- """
- Encrypt context and store it on Hedera File Service.
+    """
+    Encrypt context and store it on Hedera File Service.
 
- Uses FileCreateTransaction for the first chunk, then FileAppendTransaction
- for any remaining chunks (handles context > 4 KB transparently).
+    Uses FileCreateTransaction for the first chunk, then FileAppendTransaction
+    for any remaining chunks (handles context > 4 KB transparently).
 
- Args:
- key: 32-byte AES-256 key from crypto.derive_key()
- plaintext: Raw context bytes to store
- token_id: Context token ID — used for HCS audit log only
- aad: Optional associated data for AES-GCM authentication.
- Binds ciphertext to its logical purpose (section, index, package).
- Must pass the same value to load_context() for decryption.
+    Args:
+        key: 32-byte AES-256 key from crypto.derive_key()
+        plaintext: Raw context bytes to store
+        token_id: Context token ID — used for HCS audit log only
+        aad: Optional associated data for AES-GCM authentication.
+            Binds ciphertext to its logical purpose (section, index, package).
+            Must pass the same value to load_context() for decryption.
 
- Returns:
- file_id as string (e.g. "0.0.22222") — store this in the NFT metadata
- """
- client = get_client()
- _, treasury_key = get_treasury()
+    Returns:
+        file_id as string (e.g. "0.0.22222") — store this in the NFT metadata
+    """
+    client = get_client()
+    _, treasury_key = get_treasury()
 
- ciphertext = encrypt_context(key, plaintext, aad)
+    ciphertext = encrypt_context(key, plaintext, aad)
 
- # File key controls future updates — treasury key for PoC
- file_key = treasury_key
+    # File key controls future updates — treasury key for PoC
+    file_key = treasury_key
 
- # Create with first chunk
- first_chunk = ciphertext[:_CHUNK_SIZE]
- remaining = ciphertext[_CHUNK_SIZE:]
+    # Create with first chunk
+    first_chunk = ciphertext[:_CHUNK_SIZE]
+    remaining = ciphertext[_CHUNK_SIZE:]
 
- create_tx = (
- FileCreateTransaction()
- .set_keys([file_key.public_key()])
- .set_contents(first_chunk)
- .freeze_with(client)
- .sign(file_key)
- )
+    create_tx = (
+        FileCreateTransaction()
+        .set_keys([file_key.public_key()])
+        .set_contents(first_chunk)
+        .freeze_with(client)
+        .sign(file_key)
+    )
 
- create_receipt = create_tx.execute(client)
- file_id = create_receipt.file_id
+    create_receipt = create_tx.execute(client)
+    file_id = create_receipt.file_id
 
- # Append remaining chunks
- offset = 0
- while offset < len(remaining):
- chunk = remaining[offset: offset + _CHUNK_SIZE]
- (
- FileAppendTransaction()
- .set_file_id(file_id)
- .set_contents(chunk)
- .freeze_with(client)
- .sign(file_key)
- .execute(client)
- )
- offset += _CHUNK_SIZE
+    # Append remaining chunks
+    offset = 0
+    while offset < len(remaining):
+        chunk = remaining[offset: offset + _CHUNK_SIZE]
+        (
+            FileAppendTransaction()
+            .set_file_id(file_id)
+            .set_contents(chunk)
+            .freeze_with(client)
+            .sign(file_key)
+            .execute(client)
+        )
+        offset += _CHUNK_SIZE
 
- file_id_str = str(file_id)
+    file_id_str = str(file_id)
 
- log_event(
- event_type="CONTEXT_STORED",
- payload={
- "file_id": file_id_str,
- "token_id": token_id,
- "plaintext_size_bytes": len(plaintext),
- "ciphertext_size_bytes": len(ciphertext),
- },
- )
+    log_event(
+        event_type="CONTEXT_STORED",
+        payload={
+            "file_id": file_id_str,
+            "token_id": token_id,
+            "plaintext_size_bytes": len(plaintext),
+            "ciphertext_size_bytes": len(ciphertext),
+        },
+    )
 
- return file_id_str
+    return file_id_str
 
 
 def load_context(key: bytes, file_id: str, token_id: str = "", aad: bytes | None = None) -> bytes:
- """
- Read encrypted context from HFS and decrypt it.
+    """
+    Read encrypted context from HFS and decrypt it.
 
- Args:
- key: 32-byte AES-256 key from crypto.derive_key()
- file_id: HFS file ID string (e.g. "0.0.22222")
- token_id: Context token ID — used for HCS audit log only
- aad: Associated data that was used during encryption.
- Must match exactly — wrong AAD raises InvalidTag.
+    Args:
+        key: 32-byte AES-256 key from crypto.derive_key()
+        file_id: HFS file ID string (e.g. "0.0.22222")
+        token_id: Context token ID — used for HCS audit log only
+        aad: Associated data that was used during encryption.
+            Must match exactly — wrong AAD raises InvalidTag.
 
- Returns:
- Decrypted plaintext bytes
+    Returns:
+        Decrypted plaintext bytes
 
- Raises:
- ValueError: if file_id format is invalid
- cryptography.exceptions.InvalidTag if key is wrong, file is tampered,
- or aad does not match encryption-time value
- """
- _validate_file_id(file_id)
- client = get_client()
+    Raises:
+        ValueError: if file_id format is invalid
+        cryptography.exceptions.InvalidTag if key is wrong, file is tampered,
+        or aad does not match encryption-time value
+    """
+    _validate_file_id(file_id)
+    client = get_client()
 
- ciphertext = (
- FileContentsQuery()
- .set_file_id(FileId.from_string(file_id))
- .execute(client)
- )
+    ciphertext = (
+        FileContentsQuery()
+        .set_file_id(FileId.from_string(file_id))
+        .execute(client)
+    )
 
- plaintext = decrypt_context(key, bytes(ciphertext), aad)
+    plaintext = decrypt_context(key, bytes(ciphertext), aad)
 
- log_event(
- event_type="CONTEXT_LOADED",
- payload={
- "file_id": file_id,
- "token_id": token_id,
- "plaintext_size_bytes": len(plaintext),
- },
- )
+    log_event(
+        event_type="CONTEXT_LOADED",
+        payload={
+            "file_id": file_id,
+            "token_id": token_id,
+            "plaintext_size_bytes": len(plaintext),
+        },
+    )
 
- return plaintext
+    return plaintext
 
 
 def update_context(key: bytes, file_id: str, new_plaintext: bytes, token_id: str = "", aad: bytes | None = None) -> None:
- """
- Replace the encrypted context for an existing HFS file.
+    """
+    Replace the encrypted context for an existing HFS file.
 
- Uses FileUpdateTransaction for the first chunk, then FileAppendTransaction
- for any remaining chunks (handles content > 4 KB transparently).
- This mirrors the store_context() chunking pattern to avoid TRANSACTION_OVERSIZE
- errors on large bundles.
+    Uses FileUpdateTransaction for the first chunk, then FileAppendTransaction
+    for any remaining chunks (handles content > 4 KB transparently).
+    This mirrors the store_context() chunking pattern to avoid TRANSACTION_OVERSIZE
+    errors on large bundles.
 
- Args:
- key: 32-byte AES-256 key (new key if rotating, same key if not)
- file_id: HFS file ID to update
- new_plaintext: New context bytes to encrypt and store
- token_id: For audit log
- aad: Associated data for AES-GCM — must match load_context() call.
- """
- _validate_file_id(file_id)
- client = get_client()
- _, treasury_key = get_treasury()
+    Args:
+        key: 32-byte AES-256 key (new key if rotating, same key if not)
+        file_id: HFS file ID to update
+        new_plaintext: New context bytes to encrypt and store
+        token_id: For audit log
+        aad: Associated data for AES-GCM — must match load_context() call.
+    """
+    _validate_file_id(file_id)
+    client = get_client()
+    _, treasury_key = get_treasury()
 
- new_ciphertext = encrypt_context(key, new_plaintext, aad)
+    new_ciphertext = encrypt_context(key, new_plaintext, aad)
 
- # FileUpdateTransaction replaces file contents — send first chunk only
- first_chunk = new_ciphertext[:_CHUNK_SIZE]
- remaining = new_ciphertext[_CHUNK_SIZE:]
+    # FileUpdateTransaction replaces file contents — send first chunk only
+    first_chunk = new_ciphertext[:_CHUNK_SIZE]
+    remaining = new_ciphertext[_CHUNK_SIZE:]
 
- (
- FileUpdateTransaction()
- .set_file_id(FileId.from_string(file_id))
- .set_contents(first_chunk)
- .freeze_with(client)
- .sign(treasury_key)
- .execute(client)
- )
+    (
+        FileUpdateTransaction()
+        .set_file_id(FileId.from_string(file_id))
+        .set_contents(first_chunk)
+        .freeze_with(client)
+        .sign(treasury_key)
+        .execute(client)
+    )
 
- # Append remaining chunks (same pattern as store_context)
- offset = 0
- while offset < len(remaining):
- chunk = remaining[offset: offset + _CHUNK_SIZE]
- (
- FileAppendTransaction()
- .set_file_id(FileId.from_string(file_id))
- .set_contents(chunk)
- .freeze_with(client)
- .sign(treasury_key)
- .execute(client)
- )
- offset += _CHUNK_SIZE
+    # Append remaining chunks (same pattern as store_context)
+    offset = 0
+    while offset < len(remaining):
+        chunk = remaining[offset: offset + _CHUNK_SIZE]
+        (
+            FileAppendTransaction()
+            .set_file_id(FileId.from_string(file_id))
+            .set_contents(chunk)
+            .freeze_with(client)
+            .sign(treasury_key)
+            .execute(client)
+        )
+        offset += _CHUNK_SIZE
 
- log_event(
- event_type="CONTEXT_UPDATED",
- payload={
- "file_id": file_id,
- "token_id": token_id,
- "new_size_bytes": len(new_ciphertext),
- },
- )
+    log_event(
+        event_type="CONTEXT_UPDATED",
+        payload={
+            "file_id": file_id,
+            "token_id": token_id,
+            "new_size_bytes": len(new_ciphertext),
+        },
+    )
 
 
 def get_file_info(file_id: str) -> dict:
- """Fetch HFS file metadata (size, keys, expiration) without reading content."""
- client = get_client()
+    """Fetch HFS file metadata (size, keys, expiration) without reading content."""
+    client = get_client()
 
- info = (
- FileInfoQuery()
- .set_file_id(FileId.from_string(file_id))
- .execute(client)
- )
+    info = (
+        FileInfoQuery()
+        .set_file_id(FileId.from_string(file_id))
+        .execute(client)
+    )
 
- return {
- "file_id": file_id,
- "size_bytes": int(info.size),
- "expiration_time": str(info.expiration_time),
- "is_deleted": bool(info.is_deleted),
- }
+    return {
+        "file_id": file_id,
+        "size_bytes": int(info.size),
+        "expiration_time": str(info.expiration_time),
+        "is_deleted": bool(info.is_deleted),
+    }

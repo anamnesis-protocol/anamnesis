@@ -19,52 +19,52 @@ PROVISION_TTL_MINUTES = 60
 
 @dataclass
 class PendingProvision:
- token_id: str
- account_id: str
- companion_name: str
- started_at: datetime
- expires_at: datetime
+    token_id: str
+    account_id: str
+    companion_name: str
+    started_at: datetime
+    expires_at: datetime
 
- @property
- def expired(self) -> bool:
- return datetime.now(timezone.utc) >= self.expires_at
+    @property
+    def expired(self) -> bool:
+        return datetime.now(timezone.utc) >= self.expires_at
 
- @property
- def expires_iso(self) -> str:
- return self.expires_at.isoformat()
+    @property
+    def expires_iso(self) -> str:
+        return self.expires_at.isoformat()
 
 
 _store: dict[str, PendingProvision] = {}
 
 
 def create_pending(token_id: str, account_id: str, companion_name: str) -> PendingProvision:
- """Register a pending provision after context token is minted."""
- now = datetime.now(timezone.utc)
- record = PendingProvision(
- token_id=token_id,
- account_id=account_id,
- companion_name=companion_name,
- started_at=now,
- expires_at=now + timedelta(minutes=PROVISION_TTL_MINUTES),
- )
- _store[token_id] = record
- return record
+    """Register a pending provision after context token is minted."""
+    now = datetime.now(timezone.utc)
+    record = PendingProvision(
+        token_id=token_id,
+        account_id=account_id,
+        companion_name=companion_name,
+        started_at=now,
+        expires_at=now + timedelta(minutes=PROVISION_TTL_MINUTES),
+    )
+    _store[token_id] = record
+    return record
 
 
 def get_pending(token_id: str) -> PendingProvision | None:
- """
- Retrieve a pending provision. Returns None if not found or expired.
- Expired records are evicted on access.
- """
- record = _store.get(token_id)
- if not record:
- return None
- if record.expired:
- del _store[token_id]
- return None
- return record
+    """
+    Retrieve a pending provision. Returns None if not found or expired.
+    Expired records are evicted on access.
+    """
+    record = _store.get(token_id)
+    if not record:
+        return None
+    if record.expired:
+        del _store[token_id]
+        return None
+    return record
 
 
 def complete_pending(token_id: str) -> PendingProvision | None:
- """Remove and return a pending provision (called after vault is created)."""
- return _store.pop(token_id, None)
+    """Remove and return a pending provision (called after vault is created)."""
+    return _store.pop(token_id, None)

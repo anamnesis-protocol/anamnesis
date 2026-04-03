@@ -16,41 +16,41 @@ load_dotenv(_env_file, override=True)
 
 
 def get_client():
- """Return a configured Hedera client for the target network."""
- from hiero_sdk_python import Client, AccountId, PrivateKey
+    """Return a configured Hedera client for the target network."""
+    from hiero_sdk_python import Client, AccountId, PrivateKey
 
- network = os.getenv("HEDERA_NETWORK", "testnet").lower()
- operator_id = AccountId.from_string(os.environ["OPERATOR_ID"])
- operator_key = PrivateKey.from_string(os.environ["OPERATOR_KEY"])
+    network = os.getenv("HEDERA_NETWORK", "testnet").lower()
+    operator_id = AccountId.from_string(os.environ["OPERATOR_ID"])
+    operator_key = PrivateKey.from_string(os.environ["OPERATOR_KEY"])
 
- if network == "mainnet":
- client = Client.for_mainnet()
- elif network == "previewnet":
- client = Client.for_previewnet()
- else:
- client = Client.for_testnet()
+    if network == "mainnet":
+        client = Client.for_mainnet()
+    elif network == "previewnet":
+        client = Client.for_previewnet()
+    else:
+        client = Client.for_testnet()
 
- client.set_operator(operator_id, operator_key)
- return client
+    client.set_operator(operator_id, operator_key)
+    return client
 
 
 def get_treasury():
- """Return (treasury_id, treasury_key) for token operations."""
- from hiero_sdk_python import AccountId, PrivateKey
+    """Return (treasury_id, treasury_key) for token operations."""
+    from hiero_sdk_python import AccountId, PrivateKey
 
- treasury_id = AccountId.from_string(
- os.environ.get("TREASURY_ID") or os.environ["OPERATOR_ID"]
- )
- treasury_key = PrivateKey.from_string(
- os.environ.get("TREASURY_KEY") or os.environ["OPERATOR_KEY"]
- )
- return treasury_id, treasury_key
+    treasury_id = AccountId.from_string(
+        os.environ.get("TREASURY_ID") or os.environ["OPERATOR_ID"]
+    )
+    treasury_key = PrivateKey.from_string(
+        os.environ.get("TREASURY_KEY") or os.environ["OPERATOR_KEY"]
+    )
+    return treasury_id, treasury_key
 
 
 def get_validator_contract_id():
- """Return the deployed EVM validation contract ID, or None if not yet deployed."""
- raw = os.getenv("VALIDATOR_CONTRACT_ID")
- if not raw:
- return None
- # ContractId not needed until contract deployment — return raw string for now
- return raw
+    """Return the deployed EVM validation contract ID, or None if not yet deployed."""
+    raw = os.getenv("VALIDATOR_CONTRACT_ID")
+    if not raw:
+        return None
+    # ContractId not needed until contract deployment — return raw string for now
+    return raw

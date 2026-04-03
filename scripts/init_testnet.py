@@ -39,13 +39,13 @@ ENV_PATH = Path(__file__).parent.parent / ".env.testnet"
 
 
 def reload_env() -> None:
- load_dotenv(dotenv_path=ENV_PATH, override=True)
+    load_dotenv(dotenv_path=ENV_PATH, override=True)
 
 
 def write_env(key: str, value: str) -> None:
- set_key(str(ENV_PATH), key, value)
- os.environ[key] = value
- print(f" .env.testnet -> {key}={value}")
+    set_key(str(ENV_PATH), key, value)
+    os.environ[key] = value
+    print(f" .env.testnet -> {key}={value}")
 
 
 # ---------------------------------------------------------------------------
@@ -53,41 +53,41 @@ def write_env(key: str, value: str) -> None:
 # ---------------------------------------------------------------------------
 
 def check_prereqs(force: bool) -> None:
- if not ENV_PATH.exists():
- print(f"[ERROR] {ENV_PATH} not found.")
- print(" Copy .env.testnet.example to .env.testnet and fill in your testnet credentials.")
- sys.exit(1)
+    if not ENV_PATH.exists():
+        print(f"[ERROR] {ENV_PATH} not found.")
+        print(" Copy .env.testnet.example to .env.testnet and fill in your testnet credentials.")
+        sys.exit(1)
 
- reload_env()
+    reload_env()
 
- network = os.getenv("HEDERA_NETWORK", "").strip().lower()
- if network != "testnet":
- print(f"[ERROR] HEDERA_NETWORK={network!r} — must be 'testnet' in .env.testnet.")
- sys.exit(1)
+    network = os.getenv("HEDERA_NETWORK", "").strip().lower()
+    if network != "testnet":
+        print(f"[ERROR] HEDERA_NETWORK={network!r} — must be 'testnet' in .env.testnet.")
+        sys.exit(1)
 
- for required in ("OPERATOR_ID", "OPERATOR_KEY"):
- if not os.getenv(required, "").strip():
- print(f"[ERROR] {required} not set in .env.testnet")
- sys.exit(1)
+    for required in ("OPERATOR_ID", "OPERATOR_KEY"):
+        if not os.getenv(required, "").strip():
+            print(f"[ERROR] {required} not set in .env.testnet")
+            sys.exit(1)
 
- already_set = {}
- for k in ("HCS_TOPIC_ID", "VALIDATOR_CONTRACT_ID"):
- v = os.getenv(k, "").strip().strip("'\"")
- if v and not v.startswith("0.0.X"):
- already_set[k] = v
+    already_set = {}
+    for k in ("HCS_TOPIC_ID", "VALIDATOR_CONTRACT_ID"):
+        v = os.getenv(k, "").strip().strip("'\"")
+        if v and not v.startswith("0.0.X"):
+            already_set[k] = v
 
- if already_set and not force:
- print("[ERROR] Some IDs are already set in .env.testnet:")
- for k, v in already_set.items():
- print(f" {k}={v}")
- print(" Use --force to overwrite, or clear them manually.")
- sys.exit(1)
+    if already_set and not force:
+        print("[ERROR] Some IDs are already set in .env.testnet:")
+        for k, v in already_set.items():
+            print(f" {k}={v}")
+        print(" Use --force to overwrite, or clear them manually.")
+        sys.exit(1)
 
- op_id = os.getenv("OPERATOR_ID")
- print(f"\n[OK] Prereqs verified.")
- print(f" Network: testnet")
- print(f" Operator: {op_id}")
- print()
+    op_id = os.getenv("OPERATOR_ID")
+    print(f"\n[OK] Prereqs verified.")
+    print(f" Network: testnet")
+    print(f" Operator: {op_id}")
+    print()
 
 
 # ---------------------------------------------------------------------------
@@ -95,12 +95,12 @@ def check_prereqs(force: bool) -> None:
 # ---------------------------------------------------------------------------
 
 def step1_create_topic() -> str:
- print("[1/2] Creating HCS audit topic on testnet...")
- from src.event_log import create_topic
- topic_id = create_topic()
- write_env("HCS_TOPIC_ID", topic_id)
- print(f" HCS topic: {topic_id}\n")
- return topic_id
+    print("[1/2] Creating HCS audit topic on testnet...")
+    from src.event_log import create_topic
+    topic_id = create_topic()
+    write_env("HCS_TOPIC_ID", topic_id)
+    print(f" HCS topic: {topic_id}\n")
+    return topic_id
 
 
 # ---------------------------------------------------------------------------
@@ -108,12 +108,12 @@ def step1_create_topic() -> str:
 # ---------------------------------------------------------------------------
 
 def step2_deploy_contract() -> str:
- print("[2/2] Deploying ContextValidator contract on testnet...")
- from src.contract import deploy_contract
- contract_id = deploy_contract()
- write_env("VALIDATOR_CONTRACT_ID", contract_id)
- print(f" Contract: {contract_id}\n")
- return contract_id
+    print("[2/2] Deploying ContextValidator contract on testnet...")
+    from src.contract import deploy_contract
+    contract_id = deploy_contract()
+    write_env("VALIDATOR_CONTRACT_ID", contract_id)
+    print(f" Contract: {contract_id}\n")
+    return contract_id
 
 
 # ---------------------------------------------------------------------------
@@ -121,33 +121,33 @@ def step2_deploy_contract() -> str:
 # ---------------------------------------------------------------------------
 
 def main():
- parser = argparse.ArgumentParser(description="Sovereign AI Context — testnet demo setup")
- parser.add_argument("--force", action="store_true", help="Overwrite existing IDs in .env.testnet")
- args = parser.parse_args()
+    parser = argparse.ArgumentParser(description="Sovereign AI Context — testnet demo setup")
+    parser.add_argument("--force", action="store_true", help="Overwrite existing IDs in .env.testnet")
+    args = parser.parse_args()
 
- print("=" * 60)
- print(" Sovereign AI Context — Testnet Demo Setup")
- print("=" * 60)
+    print("=" * 60)
+    print(" Sovereign AI Context — Testnet Demo Setup")
+    print("=" * 60)
 
- check_prereqs(args.force)
+    check_prereqs(args.force)
 
- topic_id = step1_create_topic()
- contract_id = step2_deploy_contract()
+    topic_id = step1_create_topic()
+    contract_id = step2_deploy_contract()
 
- print("=" * 60)
- print(" TESTNET SETUP COMPLETE")
- print("=" * 60)
- print(f" HCS topic: {topic_id}")
- print(f" Contract: {contract_id}")
- print()
- print(" Start the demo server:")
- print(" demo_testnet.bat")
- print(" or:")
- print(" set SOVEREIGN_ENV=testnet && python -m uvicorn api.main:app --reload --port 8000")
- print()
- print(" Then open: http://localhost:8000/demo")
- print("=" * 60)
+    print("=" * 60)
+    print(" TESTNET SETUP COMPLETE")
+    print("=" * 60)
+    print(f" HCS topic: {topic_id}")
+    print(f" Contract: {contract_id}")
+    print()
+    print(" Start the demo server:")
+    print(" demo_testnet.bat")
+    print(" or:")
+    print(" set SOVEREIGN_ENV=testnet && python -m uvicorn api.main:app --reload --port 8000")
+    print()
+    print(" Then open: http://localhost:8000/demo")
+    print("=" * 60)
 
 
 if __name__ == "__main__":
- main()
+    main()
