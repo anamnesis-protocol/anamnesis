@@ -120,7 +120,7 @@ MODELS: dict[str, dict] = {
 # hard_requirement_reason — shown to user when no capable model is configured
 # profile_note — optional extra context surfaced in the recommendation
 #
-# This is the core routing intelligence of every Arty Fitchels harness.
+# This is the core routing intelligence of every Sovereign AI Context harness.
 # It evaluates the user's intent and maps it to the best available model so the
 # harness always steers the user toward the right tool for the job.
 # ---------------------------------------------------------------------------

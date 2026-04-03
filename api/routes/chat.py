@@ -176,7 +176,7 @@ def list_models(session_id: str | None = None):
             "models": [],
             "message": (
                 "No AI models are active on your account. "
-                "Click ⚙ to add your own API keys, or contact Arty Fitchels support."
+                "Click ⚙ to add your own API keys, or contact support."
                 if (user_api_keys is not None)
                 else "No AI model API keys configured on the server. Add ANTHROPIC_API_KEY to .env."
             ),
@@ -199,7 +199,7 @@ def recommend(req: RecommendRequest):
     """
     Classify the user's message and return a model recommendation.
 
-    Core directive of every Arty Fitchels harness:
+    Core directive of every Sovereign AI Context harness:
     evaluate the task against the user's configured models and route to
     the best available option. Surface unconfigured superior models as
     sidenotes. Warn if the task requires a specific capability (e.g. vision)

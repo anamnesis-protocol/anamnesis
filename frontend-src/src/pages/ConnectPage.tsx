@@ -147,7 +147,7 @@ export default function ConnectPage() {
                     : 'bg-surface-card text-slate-400 hover:text-slate-200'
                 }`}
               >
-                New to Arty Fitchels
+                New to Sovereign AI Context
               </button>
             </div>
           )}
