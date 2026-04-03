@@ -50,6 +50,7 @@ from api.routes.billing import router as billing_router
 from api.routes.chat import router as chat_router
 from api.routes.user_keys import router as user_keys_router
 from api.routes.vault import router as vault_router
+from api.routes.skills import router as skills_router
 
 app = FastAPI(
  title="Sovereign AI Context API",
@@ -86,6 +87,7 @@ app.include_router(billing_router)
 app.include_router(chat_router)
 app.include_router(user_keys_router)
 app.include_router(vault_router)
+app.include_router(skills_router)
 
 # Demo router (server-side signing, no wallet) — testnet/dev only
 if _env_name == "testnet":
