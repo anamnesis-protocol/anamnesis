@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Sovereign AI Context",
+    "slug": "context-sovereignty",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0f1117"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0f1117"
+      },
+      "package": "com.artyfitchels.context_sovereignty"
+    },
+    "ios": {
+      "bundleIdentifier": "com.artyfitchels.context-sovereignty",
+      "supportsTablet": true
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
+  }
+}
