@@ -37,6 +37,7 @@ from src.memory_packages import push_package, query_packages, push_package_index
 
 import hashlib
 import json
+import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, asdict
@@ -54,15 +55,22 @@ from src.vault import (
 from src.event_log import log_event
 
 # ---------------------------------------------------------------------------
-# Vault paths for each category
+# Vault paths for each category — configurable via env vars
 # ---------------------------------------------------------------------------
-VAULT_ROOT = Path(r"D:\symbiote_suit")
+VAULT_ROOT = Path(os.environ.get("MEMORY_VAULT_ROOT", str(Path.home() / "vault")))
 
-PACKAGE_CATEGORIES: dict[str, Path] = {
-    "sessions": VAULT_ROOT / "Archive",
-    "research": VAULT_ROOT / "Research",
-    "projects": VAULT_ROOT / "02 - Projects",
-}
+_cats_override = os.environ.get("MEMORY_PACKAGE_CATEGORIES", "")
+if _cats_override:
+    import json as _json
+    PACKAGE_CATEGORIES: dict[str, Path] = {
+        k: Path(v) for k, v in _json.loads(_cats_override).items()
+    }
+else:
+    PACKAGE_CATEGORIES: dict[str, Path] = {
+        "sessions": VAULT_ROOT / "archive",
+        "research": VAULT_ROOT / "research",
+        "projects": VAULT_ROOT / "projects",
+    }
 
 # Files to skip (READMEs, empty files, PDFs handled separately)
 SKIP_NAMES = {"README.md", "EdTech Integration Service.md"}

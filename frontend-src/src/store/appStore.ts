@@ -67,7 +67,7 @@ export const useAppStore = create<AppStore>()(
       setActiveModel: (activeModel) => set({ activeModel }),
     }),
     {
-      name: 'arty-fitchels-app',
+      name: 'context-sovereignty-app',
       // Only persist the token — never persist session/keys
       partialize: (state) => ({ savedTokenId: state.savedTokenId }),
     }
