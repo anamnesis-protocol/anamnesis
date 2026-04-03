@@ -139,6 +139,17 @@ def open_session(
             detail=f"Wallet signature must be 64 bytes (Ed25519) or 65 bytes (secp256k1). Got {len(wallet_sig)}.",
         )
 
+    # ---- Check vault lock — fail fast before any expensive HFS/contract ops ----
+    existing_holder = get_lock_holder(token_id)
+    if existing_holder:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Vault '{token_id}' already has an active session. "
+                "Call POST /session/close to end the existing session before opening a new one."
+            ),
+        )
+
     # ---- Derive purpose-separated keys (Claim 14 + Element H) ----
     try:
         section_key = derive_key(token_id, wallet_sig, info=_INFO_SECTION)
@@ -241,17 +252,6 @@ def open_session(
                 status_code=403,
                 detail=f"Section '{section_name}' failed integrity check: {exc}",
             )
-
-    # ---- Check vault lock — one active session per token_id ----
-    existing_holder = get_lock_holder(token_id)
-    if existing_holder:
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                f"Vault '{token_id}' already has an active session. "
-                "Call POST /session/close to end the existing session before opening a new one."
-            ),
-        )
 
     # ---- Build session ----
     # Keys are stored as bytearray in the session store so they can be explicitly
