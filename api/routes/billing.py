@@ -1,5 +1,5 @@
 """
-api/routes/billing.py — Arty Fitchels subscription billing (Stripe / USD only)
+api/routes/billing.py — Sovereign AI Context subscription billing (Stripe / USD only)
 
 Pricing:
  $99 one-time setup fee — mints the vault on Hedera, yours forever
@@ -68,7 +68,7 @@ def _supabase_service():
 @limiter.limit("3/minute")
 def create_checkout(request: Request, user_id: str = Depends(get_current_user)):
     """
-    Create a Stripe Checkout Session for Arty Fitchels onboarding.
+    Create a Stripe Checkout Session for Sovereign AI Context onboarding.
 
     Charges in a single session (mode=subscription):
     $99 one-time setup fee — billed on the first invoice alongside month 1
