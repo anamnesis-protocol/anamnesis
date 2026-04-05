@@ -35,14 +35,14 @@ MODELS: dict[str, dict] = {
     # ── Anthropic / Claude (default) ───
     # Claude is the platform default — included in every subscription.
     # Listed first so it is the pre-selected model in the UI.
-    "claude-3-5-sonnet-20241022": {
+    "claude-sonnet-4-5": {
         "provider": "anthropic",
-        "display": "Arty (Claude Sonnet) ★", # ★ = platform default
+        "display": "Claude Sonnet 4.5 ★", # ★ = platform default
         "env_key": "ANTHROPIC_API_KEY",
     },
-    "claude-3-opus-20240229": {
+    "claude-opus-4-6": {
         "provider": "anthropic",
-        "display": "Arty Pro (Claude Opus)",
+        "display": "Claude Opus 4.6",
         "env_key": "ANTHROPIC_API_KEY",
     },
     # ── OpenAI ────────────────────────────────────────────────────────────────
@@ -88,6 +88,29 @@ MODELS: dict[str, dict] = {
         "provider": "groq",
         "display": "Mixtral 8x7B — Fast (Groq)",
         "env_key": "GROQ_API_KEY",
+    },
+    # ── OpenRouter (unified gateway — 100+ models, one API key) ─────────────
+    # Model IDs use "openrouter/" prefix; prefix is stripped before the API call.
+    # Full model list: https://openrouter.ai/models
+    "openrouter/anthropic/claude-sonnet-4-5": {
+        "provider": "openrouter",
+        "display": "Claude Sonnet 4.5 via OpenRouter",
+        "env_key": "OPENROUTER_PAID_KEY",  # requires credits — BYOK or paid operator key
+    },
+    "openrouter/google/gemini-2.0-flash-001": {
+        "provider": "openrouter",
+        "display": "Gemini 2.0 Flash via OpenRouter",
+        "env_key": "OPENROUTER_PAID_KEY",  # requires credits — BYOK or paid operator key
+    },
+    "openrouter/meta-llama/llama-3.3-70b-instruct:free": {
+        "provider": "openrouter",
+        "display": "Llama 3.3 70B (Free) via OpenRouter",
+        "env_key": "OPENROUTER_API_KEY",
+    },
+    "openrouter/deepseek/deepseek-chat-v3-0324:free": {
+        "provider": "openrouter",
+        "display": "DeepSeek V3 (Free) via OpenRouter",
+        "env_key": "OPENROUTER_API_KEY",
     },
     # ── Ollama (local models — zero data leaves the machine) ─────────────────
     # env_key holds the server base URL, not an API key.
@@ -295,6 +318,7 @@ def available_models(user_api_keys: dict | None = None) -> list[dict]:
                 "id": model_id,
                 "display": meta["display"],
                 "provider": meta["provider"],
+                "available": True,
             })
     return result
 
@@ -655,6 +679,53 @@ async def _stream_groq(
 
 
 # ---------------------------------------------------------------------------
+# Provider: OpenRouter (OpenAI-compatible gateway — 100+ models)
+# ---------------------------------------------------------------------------
+
+async def _stream_openrouter(
+    model_id: str,
+    system_prompt: str,
+    history: list[dict],
+    message: str,
+    user_api_keys: dict | None = None,
+) -> AsyncIterator[str]:
+    try:
+        from openai import AsyncOpenAI
+    except ImportError:
+        yield _sse("[ERROR] openai package not installed. Run: pip install openai", done=True)
+        return
+
+    api_key = _resolve_api_key("OPENROUTER_API_KEY", "openrouter", user_api_keys)
+    client = AsyncOpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=api_key,
+        default_headers={"HTTP-Referer": "https://sovereign-ai-context.app"},
+    )
+
+    # Strip "openrouter/" namespace prefix before calling the API
+    actual_model = model_id[len("openrouter/"):] if model_id.startswith("openrouter/") else model_id
+
+    messages = [{"role": "system", "content": system_prompt}]
+    messages += history
+    messages.append({"role": "user", "content": message})
+
+    try:
+        stream = await client.chat.completions.create(
+            model=actual_model,
+            messages=messages,
+            stream=True,
+            max_tokens=2048,
+        )
+        async for chunk in stream:
+            delta = chunk.choices[0].delta.content
+            if delta:
+                yield _sse(delta)
+        yield _sse("", done=True)
+    except Exception as exc:
+        yield _sse(f"[ERROR] OpenRouter: {exc}", done=True)
+
+
+# ---------------------------------------------------------------------------
 # Provider: Ollama (local server — OpenAI-compatible, zero data egress)
 # ---------------------------------------------------------------------------
 
@@ -754,6 +825,9 @@ async def stream_response(
             yield chunk
     elif provider == "ollama":
         async for chunk in _stream_ollama(model_id, system_prompt, history, message, user_api_keys=user_api_keys):
+            yield chunk
+    elif provider == "openrouter":
+        async for chunk in _stream_openrouter(model_id, system_prompt, history, message, user_api_keys=user_api_keys):
             yield chunk
     else:
         yield _sse(f"[ERROR] Unknown provider: {provider}", done=True)
