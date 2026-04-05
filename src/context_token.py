@@ -57,12 +57,12 @@ def mint_context_token(
  treasury_id, treasury_key = get_treasury()
 
  # Step 1: Create the token type (NFT, no admin/supply keys)
- metadata = json.dumps({
- "type": "sovereign-ai-context",
- "version": "1.0",
- "context_file": context_file_id,
- "companion": companion_name,
- }).encode("utf-8")
+ # Hedera NFT metadata limit: 100 bytes per serial. Use compact JSON + truncate name.
+ name_truncated = companion_name[:20] if companion_name else ""
+ metadata = json.dumps(
+     {"sac": "1", "f": context_file_id, "n": name_truncated},
+     separators=(",", ":"),
+ ).encode("utf-8")
 
  create_tx = (
  TokenCreateTransaction()
