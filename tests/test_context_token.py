@@ -46,5 +46,5 @@ class TestContextTokenNetwork:
         token_id = mint_context_token(context_file_id=file_id)
         meta = get_nft_metadata(token_id, serial=1)
 
-        assert meta["context_file"] == file_id
-        assert meta["type"] == "sovereign-ai-context"
+        assert meta["f"] == file_id
+        assert meta["sac"] == "1"

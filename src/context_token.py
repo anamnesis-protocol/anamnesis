@@ -35,6 +35,15 @@ from src.config import get_client, get_treasury
 from src.event_log import log_event
 
 
+def _build_metadata(context_file_id: str, companion_name: str) -> bytes:
+    """Build NFT metadata bytes. Exported for testing."""
+    name_truncated = companion_name[:20] if companion_name else ""
+    return json.dumps(
+        {"sac": "1", "f": context_file_id, "n": name_truncated},
+        separators=(",", ":"),
+    ).encode("utf-8")
+
+
 def mint_context_token(
  context_file_id: str,
  companion_name: str = "Assistant",
@@ -58,11 +67,7 @@ def mint_context_token(
 
  # Step 1: Create the token type (NFT, no admin/supply keys)
  # Hedera NFT metadata limit: 100 bytes per serial. Use compact JSON + truncate name.
- name_truncated = companion_name[:20] if companion_name else ""
- metadata = json.dumps(
-     {"sac": "1", "f": context_file_id, "n": name_truncated},
-     separators=(",", ":"),
- ).encode("utf-8")
+ metadata = _build_metadata(context_file_id, companion_name)
 
  create_tx = (
  TokenCreateTransaction()

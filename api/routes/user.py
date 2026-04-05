@@ -271,7 +271,7 @@ def provision_complete(req: ProvisionCompleteRequest) -> ProvisionCompleteRespon
         raise HTTPException(
             status_code=502,
             detail=f"Vault HFS push succeeded but contract registration failed: {exc}. "
-            "Token minted and vault exists on HFS — contact support with your token_id.",
+            f"Token minted and vault exists on HFS — contact support with token_id={token_id}.",
         )
 
     # ---- Log to HCS ----
@@ -284,7 +284,7 @@ def provision_complete(req: ProvisionCompleteRequest) -> ProvisionCompleteRespon
                 "companion_name": pending.companion_name,
                 "sections": list(section_file_ids.keys()),
                 "index_file_id": index_file_id,
-                "vault_registered": vault_registered,
+                "vault_registered": True,
                 "created_at": created_at,
             },
         )
