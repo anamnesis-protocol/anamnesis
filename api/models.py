@@ -29,18 +29,17 @@ class ChallengeResponse(BaseModel):
 
 class SessionOpenRequest(BaseModel):
  token_id: str = Field(
- description="Context token ID. Must match the token used for /session/challenge."
+ description="Context token ID."
  )
- wallet_signature_hex: str = Field(
+ passphrase: str = Field(
  description=(
- "Hex-encoded wallet signature over the challenge bytes. "
- "Ed25519: 64 bytes. secp256k1: 65 bytes (recoverable). "
- "Auth succeeds if AES-GCM decryption succeeds with the derived key."
+ "User passphrase. SHA-256 hashed, used as HKDF IKM to derive the vault decryption key. "
+ "Must match the passphrase used at provision time."
  )
  )
  serial: int = Field(
  default=1,
- description="NFT serial number (default 1 — most tokens use serial 1).",
+ description="NFT serial number (default 1).",
  )
 
 

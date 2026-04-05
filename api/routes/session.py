@@ -16,6 +16,7 @@ Auth model:
 
 import hashlib
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -127,33 +128,20 @@ def open_session(
         except Exception:
             pass # invalid/expired token → continue as demo mode
 
-    # ---- Parse wallet signature ----
-    try:
-        wallet_sig = bytes.fromhex(req.wallet_signature_hex)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="wallet_signature_hex is not valid hex.")
+    # ---- Derive IKM from passphrase ----
+    if not req.passphrase or len(req.passphrase) < 8:
+        raise HTTPException(status_code=400, detail="Passphrase must be at least 8 characters.")
+    ikm = hashlib.sha256(req.passphrase.encode("utf-8")).digest()
 
-    if len(wallet_sig) not in (64, 65):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Wallet signature must be 64 bytes (Ed25519) or 65 bytes (secp256k1). Got {len(wallet_sig)}.",
-        )
-
-    # ---- Check vault lock — fail fast before any expensive HFS/contract ops ----
+    # ---- Evict any stale session for this vault ----
     existing_holder = get_lock_holder(token_id)
     if existing_holder:
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                f"Vault '{token_id}' already has an active session. "
-                "Call POST /session/close to end the existing session before opening a new one."
-            ),
-        )
+        close_session(existing_holder)
 
     # ---- Derive purpose-separated keys (Claim 14 + Element H) ----
     try:
-        section_key = derive_key(token_id, wallet_sig, info=_INFO_SECTION)
-        index_key = derive_key(token_id, wallet_sig, info=_INFO_INDEX)
+        section_key = derive_key(token_id, ikm, info=_INFO_SECTION)
+        index_key = derive_key(token_id, ikm, info=_INFO_INDEX)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Key derivation failed: {exc}")
 
@@ -210,48 +198,54 @@ def open_session(
             "Run vault_push.py to push soul/user/symbiote/session_state.",
         )
 
-    # ---- Fetch and decrypt each identity section ----
-    # expected_hash: plaintext SHA-256 stored at provision time.
-    # If present → verify_content() will hash the decrypted plaintext and compare.
-    # If absent (old vault) → hash check is skipped; AES-GCM auth tag still guards ciphertext.
+    # ---- Fetch and decrypt all identity sections in parallel ----
+    # Each pull_section is a blocking HFS network call (~1-2s on testnet).
+    # Running them concurrently cuts open time from O(n_sections) to O(1 round-trip).
     context_raw: dict[str, bytes] = {}
-    for section_name, file_id in identity_ids.items():
-        try:
-            content: bytes = pull_section(
-                file_id,
-                section_key,
-                token_id,
-                section_name=section_name,
-                expected_hash=stored_hashes.get(section_name), # None → skip hash check
-            )
-            context_raw[section_name] = content
-        except InvalidTag:
-            raise HTTPException(
-                status_code=401,
-                detail=f"Authentication failed: could not decrypt section '{section_name}'. "
-                "Invalid wallet signature.",
-            )
-        except ValueError as exc:
-            # Injection scan, hash mismatch, or integrity failure .
-            # Log INTEGRITY_FAILURE to HCS before raising — closes the audit loop for
-            # attack attempts ( session context envelope audit trail).
+
+    def _pull(section_name: str, file_id: str):
+        return section_name, pull_section(
+            file_id,
+            section_key,
+            token_id,
+            section_name=section_name,
+            expected_hash=stored_hashes.get(section_name),
+        )
+
+    with ThreadPoolExecutor(max_workers=len(identity_ids)) as pool:
+        futures = {
+            pool.submit(_pull, name, fid): name
+            for name, fid in identity_ids.items()
+        }
+        for future in as_completed(futures):
+            section_name = futures[future]
             try:
-                log_event(
-                    event_type="INTEGRITY_FAILURE",
-                    payload={
-                        "token_id": token_id,
-                        "serial": serial,
-                        "source": "saas_api",
-                        "section": section_name,
-                        "error": str(exc),
-                    },
+                name, content = future.result()
+                context_raw[name] = content
+            except InvalidTag:
+                raise HTTPException(
+                    status_code=401,
+                    detail=f"Authentication failed: could not decrypt section '{section_name}'. "
+                    "Invalid wallet signature.",
                 )
-            except Exception:
-                pass # HCS log is best-effort — still raise the 403
-            raise HTTPException(
-                status_code=403,
-                detail=f"Section '{section_name}' failed integrity check: {exc}",
-            )
+            except ValueError as exc:
+                try:
+                    log_event(
+                        event_type="INTEGRITY_FAILURE",
+                        payload={
+                            "token_id": token_id,
+                            "serial": serial,
+                            "source": "saas_api",
+                            "section": section_name,
+                            "error": str(exc),
+                        },
+                    )
+                except Exception:
+                    pass
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Section '{section_name}' failed integrity check: {exc}",
+                )
 
     # ---- Build session ----
     # Keys are stored as bytearray in the session store so they can be explicitly
@@ -268,6 +262,22 @@ def open_session(
         full_section_ids=section_ids,
         user_id=user_id,
     )
+
+    # ---- Build in-memory RAG index from decrypted vault content ----
+    # BM25Okapi is imported here (not inside rag.py) to avoid a sys.path ordering
+    # issue where rank_bm25 is not yet resolvable at rag.py module init time.
+    # Non-fatal — chat falls back to full-section injection if indexing fails.
+    try:
+        from rank_bm25 import BM25Okapi
+        from api.services.rag import chunk_sections, VaultIndex, _tokenize
+        chunks = chunk_sections(session.context_sections)
+        if chunks:
+            corpus = [_tokenize(c.text) for c in chunks]
+            session.vault_index = VaultIndex(chunks=chunks, bm25=BM25Okapi(corpus))
+        else:
+            session.vault_index = VaultIndex(chunks=[], bm25=None)
+    except Exception:
+        session.vault_index = None
 
     # ---- Log SESSION_STARTED to HCS (Element J — session context envelope) ----
     # integrity_verified: True means every loaded section passed its injection scan
@@ -480,6 +490,7 @@ def close_session_endpoint(req: SessionCloseRequest) -> SessionCloseResponse:
                 "session_opened_at": session.created_iso,
                 "closed_at": closed_at,
             },
+            blocking=True,
         )
         hcs_logged = True
     except Exception:
