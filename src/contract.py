@@ -33,6 +33,8 @@ from hiero_sdk_python import (
     Hbar,
     )
 from hiero_sdk_python.contract.contract_id import ContractId
+from hiero_sdk_python.hapi.services import response_code_pb2 as _rc
+_SUCCESS = _rc.SUCCESS  # 22
 from src.config import get_client, get_treasury
 from src.event_log import log_event
 
@@ -108,10 +110,10 @@ def deploy_contract() -> str:
         )
 
     receipt = tx.execute(client)
-    from hiero_sdk_python import ResponseCode
-    status = ResponseCode(receipt.status).name
-    if status != "SUCCESS":
-        raise RuntimeError(f"Contract deployment failed: {status}")
+    if receipt.status != _SUCCESS:
+        raise RuntimeError(
+            f"Contract deployment failed: status={receipt.status} (code {int(receipt.status)})"
+        )
 
     contract_id = str(receipt.contract_id)
 
@@ -150,7 +152,7 @@ def register_file(
         .add_string(file_id)
         )
 
-    (
+    receipt = (
         ContractExecuteTransaction()
         .set_contract_id(ContractId.from_string(contract_id))
         .set_gas(200_000)
@@ -158,6 +160,13 @@ def register_file(
         .freeze_with(client)
         .sign(treasury_key)
         .execute(client)
+        )
+
+    if receipt.status != _SUCCESS:
+        raise RuntimeError(
+            f"registerContextFile failed on-chain: status={receipt.status} "
+            f"(code {int(receipt.status)}). "
+            f"Contract: {contract_id}, msg.sender must equal deployer."
         )
 
     log_event(
