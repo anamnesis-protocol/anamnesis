@@ -102,24 +102,29 @@ MODELS: dict[str, dict] = {
         "display": "Gemini 2.0 Flash via OpenRouter",
         "env_key": "OPENROUTER_PAID_KEY",  # requires credits — BYOK or paid operator key
     },
+    "openrouter/openai/gpt-oss-20b:free": {
+        "provider": "openrouter",
+        "display": "GPT OSS 20B (Free)",
+        "env_key": "OPENROUTER_API_KEY",
+    },
+    "openrouter/openai/gpt-oss-120b:free": {
+        "provider": "openrouter",
+        "display": "GPT OSS 120B (Free)",
+        "env_key": "OPENROUTER_API_KEY",
+    },
     "openrouter/meta-llama/llama-3.3-70b-instruct:free": {
         "provider": "openrouter",
         "display": "Llama 3.3 70B (Free)",
         "env_key": "OPENROUTER_API_KEY",
     },
-    "openrouter/deepseek/deepseek-r1:free": {
+    "openrouter/google/gemma-3-12b-it:free": {
         "provider": "openrouter",
-        "display": "DeepSeek R1 (Free)",
+        "display": "Gemma 3 12B (Free)",
         "env_key": "OPENROUTER_API_KEY",
     },
-    "openrouter/google/gemma-3-27b-it:free": {
+    "openrouter/nvidia/nemotron-3-super-120b-a12b:free": {
         "provider": "openrouter",
-        "display": "Gemma 3 27B (Free)",
-        "env_key": "OPENROUTER_API_KEY",
-    },
-    "openrouter/mistralai/mistral-7b-instruct:free": {
-        "provider": "openrouter",
-        "display": "Mistral 7B (Free)",
+        "display": "Nemotron 120B (Free)",
         "env_key": "OPENROUTER_API_KEY",
     },
     # ── Ollama (local models — zero data leaves the machine) ─────────────────
