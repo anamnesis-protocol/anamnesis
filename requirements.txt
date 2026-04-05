@@ -8,7 +8,9 @@ fastapi>=0.111.0
 uvicorn[standard]>=0.29.0
 httpx>=0.27.0 # for TestClient in tests + HBAR mirror node queries
 # ── Paywall / billing ──────────────────────────────────────────────────────────
-supabase>=2.0.0 # auth + subscriptions database
+supabase>=2.0.0,<2.28.0 # auth + subscriptions database
+storage3<2.0.0 # override: storage3 2.x pulls pyiceberg which has no cp314 wheel; we don't use Supabase Storage
+py-solc-x>=2.0.0 # Solidity compiler wrapper for EVM contract interaction
 stripe>=8.0.0 # card payment processing
 PyJWT>=2.8.0 # Supabase JWT verification
 # ── AI model providers ─────────────────────────────────────────────────────────
@@ -19,3 +21,8 @@ mistralai>=1.0.0 # Mistral Large, Mistral Small
 groq>=0.8.0 # Llama 3, Mixtral via Groq
 # ── Rate limiting ──────────────────────────────────────────────────────────────
 slowapi>=0.1.9 # slowapi: Starlette/FastAPI rate limiting (limiter.py)
+# ── In-memory RAG (vault context retrieval) ────────────────────────────────────
+rank-bm25>=0.2.2 # BM25Okapi — relevance-gated vault chunk retrieval (pure Python, no ML)
+
+# ── Protobuf (must match hiero_sdk_python gencode version) ────────────────────
+protobuf>=6.31.1
