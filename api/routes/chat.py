@@ -107,47 +107,133 @@ _SECTION_LABELS = {
 _SECTION_ORDER = ["harness", "user", "config", "session_state"]
 
 
-def build_system_prompt(context_sections: dict[str, str], model_id: str, token_id: str) -> str:
+def build_system_prompt(
+    context_sections: dict[str, str],
+    model_id: str,
+    token_id: str,
+    query: str = "",
+    vault_index=None,
+) -> str:
     """
-    Inject the decrypted vault context as a structured system prompt.
+    Build the system prompt from decrypted vault context.
 
-    Each section gets a clearly labeled block. Sections are injected in canonical
-    order (soul → user → symbiote → session_state) regardless of dict ordering.
-    Unknown section names are included at the end with their name as the label.
+    Harness is always injected in full — it is the AI's identity and directives.
+
+    Remaining sections (user, config, session_state) are loaded via RAG when a
+    vault_index is available: only chunks relevant to the current query are injected.
+    This keeps the prompt lean as the vault grows and prevents context overflow.
+
+    Falls back to full-section injection when:
+    - vault_index is None or empty (rank-bm25 not installed, or indexing failed)
+    - RAG returns no results for the query (e.g. very short or generic message)
     """
     model_display = MODELS.get(model_id, {}).get("display", model_id)
 
+    # Describe which vault sections are loaded so the model knows what context exists
+    loaded_sections = [s for s in _SECTION_ORDER if context_sections.get(s, "").strip()]
+    rag_active = vault_index is not None and vault_index.chunk_count > 0
+    context_note = (
+        f"Your context is loaded from a sovereign vault (token {token_id}) secured on Hedera Hashgraph. "
+        f"Vault sections available: {', '.join(loaded_sections) if loaded_sections else 'none yet — vault is new'}. "
+    )
+    if rag_active:
+        context_note += (
+            f"A RAG index ({vault_index.chunk_count} chunks) is active: "
+            "only the most relevant context is injected per message to keep responses focused."
+        )
+    else:
+        context_note += "Full vault content is injected below."
+
     lines = [
-        "You are an AI operating under a user-defined harness. "
-        "Your directives, context, and behavior are set and owned exclusively by your user, "
-        "secured on the Hedera Hashgraph blockchain. "
-        "No platform can alter your configuration or access this harness without the user's cryptographic signature. "
-        "The human is in command — you execute their directives.",
+        "You are an AI companion operating under a user-defined sovereign harness. "
+        "Your identity, directives, and context are owned exclusively by your user — "
+        "encrypted, stored on Hedera Hashgraph, and decrypted only with their cryptographic signature. "
+        "No platform can read or alter this harness without the user's key. "
+        "The human is in command. Execute their directives as configured below.",
+        "",
+        context_note,
         "",
     ]
 
-    # Inject sections in canonical order
-    injected = set()
-    for section_name in _SECTION_ORDER:
-        content = context_sections.get(section_name, "").strip()
-        if content:
-            label = _SECTION_LABELS.get(section_name, section_name.upper())
-            lines += [f"=== {label} ===", content, ""]
-            injected.add(section_name)
+    # ---- Harness: always inject in full ----
+    harness = context_sections.get("harness", "").strip()
+    if harness:
+        lines += ["=== HARNESS DIRECTIVES ===", harness, ""]
 
-    # Any additional sections not in the canonical order
-    for section_name, content in context_sections.items():
-        if section_name not in injected and content.strip():
-            lines += [f"=== {section_name.upper()} ===", content.strip(), ""]
+    # ---- Remaining sections: RAG-gated or full fallback ----
+    non_harness = {k: v for k, v in context_sections.items() if k != "harness"}
+    rag_used = False
+
+    if vault_index is not None and vault_index.chunk_count > 0 and query.strip():
+        relevant = vault_index.query(query)
+        if relevant:
+            rag_used = True
+            lines += ["=== RETRIEVED CONTEXT ==="]
+            for chunk in relevant:
+                label = _SECTION_LABELS.get(chunk.section, chunk.section.upper())
+                lines += [f"[{label} — {chunk.header}]", chunk.text, ""]
+
+    if not rag_used:
+        # Full injection: canonical order for known sections, then any extras
+        injected: set[str] = set()
+        for section_name in _SECTION_ORDER:
+            if section_name == "harness":
+                continue  # already injected above
+            content = non_harness.get(section_name, "").strip()
+            if content:
+                label = _SECTION_LABELS.get(section_name, section_name.upper())
+                lines += [f"=== {label} ===", content, ""]
+                injected.add(section_name)
+        for section_name, content in non_harness.items():
+            if section_name not in injected and content.strip():
+                lines += [f"=== {section_name.upper()} ===", content.strip(), ""]
 
     lines += [
         "---",
-        f"Active model: {model_display}",
-        f"Harness secured by: Hedera Hashgraph | Context Token: {token_id}",
-        "Session verified end-to-end. Execute the user's directives as configured above.",
+        f"Active model: {model_display} | Context token: {token_id} | Vault sections: {len(loaded_sections)} loaded",
+        "Session cryptographically verified. Respond as the companion defined above.",
     ]
 
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# POST /chat/keys — store API keys on an active session (no Supabase required)
+# ---------------------------------------------------------------------------
+
+class SessionKeysRequest(BaseModel):
+    session_id: str
+    keys: dict[str, str] = Field(description="provider -> api_key, e.g. {'anthropic': 'sk-ant-...'}")
+
+
+@router.post("/keys")
+def set_session_keys(req: SessionKeysRequest):
+    """
+    Store AI model API keys on an active session (in-memory only).
+
+    Keys are held on the session object and zeroed at session close.
+    They are never persisted to disk or Supabase. The client never
+    receives key values back — only the list of configured providers.
+
+    Works in demo/testnet mode without any auth or Supabase dependency.
+    """
+    session = get_session(req.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail=f"Session '{req.session_id}' not found or expired.")
+
+    valid_providers = {meta["provider"] for meta in MODELS.values()}
+    stored = []
+    for provider, key in req.keys.items():
+        if provider not in valid_providers:
+            raise HTTPException(status_code=400, detail=f"Unknown provider '{provider}'. Valid: {sorted(valid_providers)}")
+        if not key.strip():
+            continue
+        if session.user_api_keys is None:
+            session.user_api_keys = {}
+        session.user_api_keys[provider] = key.strip()
+        stored.append(provider)
+
+    return {"configured": stored}
 
 
 # ---------------------------------------------------------------------------
@@ -282,11 +368,15 @@ async def chat_message(req: ChatRequest):
     if not req.message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty.")
 
-    # ---- Build system prompt from vault context ----
+    # ---- Build system prompt — RAG-gated context retrieval ----
+    # vault_index was built at session open from the decrypted vault content.
+    # Only chunks relevant to this specific message are injected (harness always full).
     system_prompt = build_system_prompt(
         context_sections=session.context_sections,
         model_id=req.model,
         token_id=session.token_id,
+        query=req.message,
+        vault_index=session.vault_index,
     )
 
     # ---- Track last model used (for auto session_state at close) ----
