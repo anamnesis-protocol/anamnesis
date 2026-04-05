@@ -264,15 +264,15 @@ def provision_complete(req: ProvisionCompleteRequest) -> ProvisionCompleteRespon
         raise HTTPException(status_code=502, detail=f"HFS index push failed: {exc}")
 
     # ---- Register vault index in ContextValidator contract ----
-    vault_registered = False
     try:
         token_evm = token_id_to_evm_address(token_id)
         register_file(contract_id, token_evm, serial=1, file_id=index_file_id)
-        vault_registered = True
-    except Exception:
-        # Non-fatal — vault exists on HFS, just not yet in contract.
-        # Operator can re-register manually with register_file().
-        pass
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Vault HFS push succeeded but contract registration failed: {exc}. "
+            "Token minted and vault exists on HFS — contact support with your token_id.",
+        )
 
     # ---- Log to HCS ----
     try:
@@ -298,7 +298,7 @@ def provision_complete(req: ProvisionCompleteRequest) -> ProvisionCompleteRespon
         token_id=token_id,
         sections_pushed=list(section_file_ids.keys()),
         index_file_id=index_file_id,
-        vault_registered=vault_registered,
+        vault_registered=True,
         message=(
             "Vault provisioned successfully. "
             "Call POST /session/open with your token_id and wallet_signature_hex to start your first session."
