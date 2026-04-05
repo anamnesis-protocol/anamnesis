@@ -29,6 +29,8 @@ from hiero_sdk_python import (
  NftId,
  Hbar,
 )
+from hiero_sdk_python.hapi.services import response_code_pb2 as _rc
+_SUCCESS = _rc.SUCCESS  # 22
 from src.config import get_client, get_treasury
 from src.event_log import log_event
 
@@ -79,7 +81,17 @@ def mint_context_token(
  )
 
  create_receipt = create_tx.execute(client)
+ if create_receipt.status != _SUCCESS:
+     raise RuntimeError(
+         f"TokenCreateTransaction failed on-chain: status={create_receipt.status} "
+         f"(code {int(create_receipt.status)})"
+     )
  token_id_obj = create_receipt.token_id
+ if token_id_obj is None:
+     raise RuntimeError(
+         f"TokenCreateTransaction returned SUCCESS but receipt has no token_id. "
+         f"Full receipt status: {create_receipt.status}"
+     )
  token_id = str(token_id_obj)
 
  # Step 2: Mint the single NFT (serial 1)
@@ -91,7 +103,12 @@ def mint_context_token(
  .sign(treasury_key)
  )
 
- mint_tx.execute(client)
+ mint_receipt = mint_tx.execute(client)
+ if mint_receipt.status != _SUCCESS:
+     raise RuntimeError(
+         f"TokenMintTransaction failed on-chain: status={mint_receipt.status} "
+         f"(code {int(mint_receipt.status)})"
+     )
  serial = 1 # max_supply=1, first mint is always serial 1
 
  # Step 3: Log creation to HCS audit trail
