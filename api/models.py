@@ -117,10 +117,10 @@ class ProvisionStartResponse(BaseModel):
 
 class ProvisionCompleteRequest(BaseModel):
  token_id: str = Field(description="Context token ID returned by /provision/start.")
- wallet_signature_hex: str = Field(
+ passphrase: str = Field(
  description=(
- "Hex-encoded wallet signature over the challenge from /provision/start. "
- "Used to derive the vault encryption key — keep the sig, you'll need it for /session/open."
+ "User-chosen passphrase. SHA-256 hashed client-side, then used as HKDF IKM to derive "
+ "the vault encryption key. Never stored — if lost, the vault cannot be decrypted."
  )
  )
 

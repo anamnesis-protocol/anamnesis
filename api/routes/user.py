@@ -205,21 +205,14 @@ def provision_complete(req: ProvisionCompleteRequest) -> ProvisionCompleteRespon
             "Call /provision/start first, or the 60-minute window has expired.",
         )
 
-    # ---- Parse wallet signature ----
-    try:
-        wallet_sig = bytes.fromhex(req.wallet_signature_hex)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="wallet_signature_hex is not valid hex.")
-
-    if len(wallet_sig) not in (64, 65):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Wallet signature must be 64 bytes (Ed25519) or 65 bytes (secp256k1). Got {len(wallet_sig)}.",
-        )
+    # ---- Derive IKM from passphrase (SHA-256 hash, never stored) ----
+    if not req.passphrase or len(req.passphrase) < 8:
+        raise HTTPException(status_code=400, detail="Passphrase must be at least 8 characters.")
+    ikm = hashlib.sha256(req.passphrase.encode("utf-8")).digest()
 
     # ---- Derive purpose-separated keys (Claim 14 + Element H) ----
-    section_key = derive_key(token_id, wallet_sig, info=_INFO_SECTION)
-    index_key = derive_key(token_id, wallet_sig, info=_INFO_INDEX)
+    section_key = derive_key(token_id, ikm, info=_INFO_SECTION)
+    index_key = derive_key(token_id, ikm, info=_INFO_INDEX)
 
     # ---- Verify contract is configured ----
     contract_id = get_validator_contract_id()
