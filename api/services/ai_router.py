@@ -104,12 +104,22 @@ MODELS: dict[str, dict] = {
     },
     "openrouter/meta-llama/llama-3.3-70b-instruct:free": {
         "provider": "openrouter",
-        "display": "Llama 3.3 70B (Free) via OpenRouter",
+        "display": "Llama 3.3 70B (Free)",
         "env_key": "OPENROUTER_API_KEY",
     },
-    "openrouter/deepseek/deepseek-chat-v3-0324:free": {
+    "openrouter/deepseek/deepseek-r1:free": {
         "provider": "openrouter",
-        "display": "DeepSeek V3 (Free) via OpenRouter",
+        "display": "DeepSeek R1 (Free)",
+        "env_key": "OPENROUTER_API_KEY",
+    },
+    "openrouter/google/gemma-3-27b-it:free": {
+        "provider": "openrouter",
+        "display": "Gemma 3 27B (Free)",
+        "env_key": "OPENROUTER_API_KEY",
+    },
+    "openrouter/mistralai/mistral-7b-instruct:free": {
+        "provider": "openrouter",
+        "display": "Mistral 7B (Free)",
         "env_key": "OPENROUTER_API_KEY",
     },
     # ── Ollama (local models — zero data leaves the machine) ─────────────────
