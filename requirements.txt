@@ -2,6 +2,7 @@ hiero-sdk-python>=0.2.1
 cryptography>=42.0.0
 python-dotenv>=1.0.0
 pytest>=8.0.0
+pytest-mock>=3.14.0 # mocker fixture for tests
 web3>=6.0.0 # for Solidity contract interaction
 pyyaml>=6.0.0 # for frontmatter metadata parsing
 fastapi>=0.111.0

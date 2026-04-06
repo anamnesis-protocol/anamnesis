@@ -54,7 +54,7 @@ class TestEventLogStructure:
 
 
 @pytest.mark.skipif(
-    os.getenv("HEDERA_NETWORK", "mock") == "mock",
+    os.getenv("HEDERA_NETWORK", "mock") == "mock" or not os.getenv("HEDERA_OPERATOR_ID"),
     reason="Requires live Hedera testnet credentials in .env",
 )
 class TestEventLogNetwork:

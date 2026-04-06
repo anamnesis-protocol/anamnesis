@@ -10,7 +10,7 @@ import pytest
 
 
 @pytest.mark.skipif(
-    os.getenv("HEDERA_NETWORK", "mock") != "testnet",
+    os.getenv("HEDERA_NETWORK", "mock") != "testnet" or not os.getenv("HEDERA_OPERATOR_ID"),
     reason="Network tests only run on testnet — mainnet would cost real HBAR",
 )
 class TestContextTokenNetwork:
