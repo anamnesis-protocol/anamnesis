@@ -24,6 +24,7 @@ class PendingProvision:
     companion_name: str
     started_at: datetime
     expires_at: datetime
+    generated_private_key_hex: str | None = None  # set when account was auto-created
 
     @property
     def expired(self) -> bool:
@@ -37,7 +38,12 @@ class PendingProvision:
 _store: dict[str, PendingProvision] = {}
 
 
-def create_pending(token_id: str, account_id: str, companion_name: str) -> PendingProvision:
+def create_pending(
+    token_id: str,
+    account_id: str,
+    companion_name: str,
+    generated_private_key_hex: str | None = None,
+) -> PendingProvision:
     """Register a pending provision after context token is minted."""
     now = datetime.now(timezone.utc)
     record = PendingProvision(
@@ -46,6 +52,7 @@ def create_pending(token_id: str, account_id: str, companion_name: str) -> Pendi
         companion_name=companion_name,
         started_at=now,
         expires_at=now + timedelta(minutes=PROVISION_TTL_MINUTES),
+        generated_private_key_hex=generated_private_key_hex,
     )
     _store[token_id] = record
     return record

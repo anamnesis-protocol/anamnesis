@@ -56,7 +56,7 @@ _INFO_SECTION = b"sovereign-ai-section-v1"
 _INFO_INDEX = b"sovereign-ai-index-v1"
 
 # Identity section names to create at provision time
-_PROVISION_SECTIONS = ["harness", "user", "config", "session_state"]
+_PROVISION_SECTIONS = ["harness", "user", "config", "session_state", "system", "credentials"]
 
 router = APIRouter(prefix="/user", tags=["user"])
 
@@ -65,7 +65,121 @@ router = APIRouter(prefix="/user", tags=["user"])
 # Default vault content templates
 # ---------------------------------------------------------------------------
 
-def _default_sections(token_id: str, account_id: str, companion_name: str, created_at: str) -> dict[str, bytes]:
+def _system_section_content(token_id: str, created_at: str) -> bytes:
+    """
+    Generate the system capabilities section for a vault.
+
+    Describes the vault architecture, RAG index, MCP server, skill packages, and
+    health check tools so the AI companion understands what it has access to.
+    Injected as part of the system prompt at every session open.
+    """
+    return f"""# System Capabilities
+
+**Token:** {token_id}
+**Initialized:** {created_at}
+
+This companion runs within the Arty Fitchels sovereign AI context system.
+Context is stored encrypted on Hedera Hashgraph — only your wallet signature can decrypt it.
+Nothing unencrypted ever touches a server at rest or in transit beyond your active session.
+
+## Vault Sections
+Five sections are loaded into every session:
+- **harness** — your AI's core directives, mission, and operating principles
+- **user** — your profile, preferences, background, and goals
+- **config** — AI name, tone, style, and response configuration
+- **session_state** — auto-updated after every session to carry forward what was worked on
+- **system** — this section (platform capabilities — reference only)
+
+Each section is stored as AES-GCM ciphertext on Hedera File Service (HFS).
+Keys are derived fresh from your wallet signature on every session open using HKDF-SHA256, then zeroed on close.
+The vault index (section → HFS file_id mapping) is also encrypted on HFS and resolved via the ContextValidator contract.
+
+## Context Retrieval (RAG)
+Vault content is indexed with BM25 at session open.
+Relevant context chunks are retrieved automatically on each conversation turn and injected
+alongside your message — you do not need to supply background manually.
+The index is rebuilt in-memory on every session open from the decrypted vault sections.
+Check retrieval quality: GET /vault/health → rag_index check
+
+## Skill Packages
+Skill packages are MCP tool definitions stored encrypted in your vault.
+When the AI learns a reusable task, it can be packaged as a skill and stored permanently.
+Skills load automatically at session open and become available as callable tools in any future
+session with any AI model — no re-teaching required.
+Manage skills: GET /skills | POST /skills | DELETE /skills/{{skill_id}}
+Skills as MCP tools: GET /skills/tools
+
+## MCP Server
+Your vault exposes a Model Context Protocol server that any MCP-compatible AI client can connect to.
+
+Static tools available in every session:
+- open_session — decrypt vault from Hedera, return session_id
+- close_session — sync changed sections to Hedera, zero session keys
+- get_vault_section — read any vault section by name
+- update_vault_section — queue a section update to be synced at close
+- list_skills — list all skill packages in this vault
+- save_skill_to_vault — package a learned task as a permanent vault skill
+
+Dynamic tools: each skill package stored in your vault is registered as a live MCP tool at session open.
+Run the MCP server: python -m api.mcp_server --transport stdio
+
+## Vault Health and Auto-Repair
+Check your vault state against your live decrypted content at any time (requires active session):
+- GET /vault/health?session_id=<id> — completeness, RAG quality, staleness, structure, HFS registry, duplicates
+- POST /vault/health/repair?session_id=<id> — rebuilds RAG index, applies all auto-fixes
+- POST /vault/upgrade?session_id=<id> — adds missing system capabilities section (this file)
+
+Health report: overall status (healthy / degraded / critical) with per-check breakdowns and actionable notes.
+
+## Session Lifecycle
+Sessions are valid for 4 hours. Concurrent sessions for the same token are blocked (409 Conflict) to
+prevent key collision. At close, changed sections are diffed against session-open hashes — only
+changed content is re-encrypted and pushed to Hedera. If a chat happened and session_state was not
+manually updated, a brief summary is auto-generated and written back to the vault.
+""".encode("utf-8")
+
+
+def _create_hedera_account() -> tuple[str, str]:
+    """
+    Create a new Hedera account sponsored by the operator.
+    Returns (account_id_str, private_key_str).
+    Operator pays the ~$0.05 HBAR account creation fee.
+    """
+    from hiero_sdk_python import AccountCreateTransaction, PrivateKey, Hbar
+    from hiero_sdk_python.hapi.services import response_code_pb2 as _rc
+    _SUCCESS_CODE = _rc.SUCCESS
+
+    from src.config import get_client, get_treasury
+    client = get_client()
+    _, treasury_key = get_treasury()
+
+    new_key = PrivateKey.generate("ed25519")
+
+    tx = (
+        AccountCreateTransaction()
+        .set_key(new_key.public_key())
+        .set_initial_balance(Hbar(0))
+        .freeze_with(client)
+        .sign(treasury_key)
+    )
+
+    receipt = tx.execute(client)
+    if receipt.status != _SUCCESS_CODE:
+        raise RuntimeError(f"AccountCreateTransaction failed: status={receipt.status}")
+
+    if receipt.account_id is None:
+        raise RuntimeError("AccountCreateTransaction succeeded but receipt has no account_id")
+
+    return str(receipt.account_id), new_key.to_string()
+
+
+def _default_sections(
+    token_id: str,
+    account_id: str,
+    companion_name: str,
+    created_at: str,
+    private_key_hex: str | None = None,
+) -> dict[str, bytes]:
     """
     Generate default vault content for a newly provisioned user.
     These are starting templates — the user customizes them post-provision.
@@ -121,6 +235,34 @@ so your AI picks up exactly where you left off.
 
 [Status: NEW — no sessions yet]
 """.encode("utf-8"),
+
+        "system": _system_section_content(token_id, created_at),
+
+        "credentials": (
+            f"""# Hedera Credentials
+
+**Account:** {account_id}
+**Token:** {token_id}
+**Created:** {created_at}
+
+## Private Key
+{private_key_hex}
+
+## Important
+This is your Hedera account private key — store it somewhere safe outside this vault.
+It controls your Hedera account ({account_id}).
+Your vault encryption is separate and protected by your passphrase.
+"""
+            if private_key_hex else
+            f"""# Hedera Credentials
+
+**Account:** {account_id}
+**Token:** {token_id}
+**Created:** {created_at}
+
+You connected your own Hedera account. Your private key is managed by your wallet.
+"""
+        ).encode("utf-8"),
     }
 
 
@@ -143,7 +285,15 @@ def provision_start(req: ProvisionStartRequest) -> ProvisionStartResponse:
     The signed challenge is the same as the /session/open challenge — once provisioning
     is complete, the same wallet_signature_hex opens the first session immediately.
     """
-    account_id = req.account_id.strip()
+    # Auto-create a Hedera account if the user didn't provide one
+    generated_private_key_hex: str | None = None
+    if req.account_id:
+        account_id = req.account_id.strip()
+    else:
+        try:
+            account_id, generated_private_key_hex = _create_hedera_account()
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"Hedera account creation failed: {exc}")
 
     # Mint the context token (placeholder context_file_id — updated after vault creation)
     try:
@@ -154,17 +304,19 @@ def provision_start(req: ProvisionStartRequest) -> ProvisionStartResponse:
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Context token mint failed: {exc}")
 
-    # Register pending record
+    # Register pending record (private key stored here until vault is created)
     pending = create_pending(
         token_id=token_id,
         account_id=account_id,
         companion_name=req.companion_name,
+        generated_private_key_hex=generated_private_key_hex,
     )
 
     challenge = make_challenge(token_id)
 
     return ProvisionStartResponse(
         token_id=token_id,
+        account_id=account_id,
         challenge_hex=challenge.hex(),
         expires_at=pending.expires_iso,
     )
@@ -229,6 +381,7 @@ def provision_complete(req: ProvisionCompleteRequest) -> ProvisionCompleteRespon
         account_id=pending.account_id,
         companion_name=pending.companion_name,
         created_at=created_at,
+        private_key_hex=pending.generated_private_key_hex,
     )
 
     # ---- Push each section to HFS ----

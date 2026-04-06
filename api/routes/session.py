@@ -58,7 +58,7 @@ _INFO_SECTION = b"sovereign-ai-section-v1"
 _INFO_INDEX = b"sovereign-ai-index-v1"
 
 # Identity section names — only these are delivered in the session context
-_IDENTITY_SECTIONS = {"harness", "user", "config", "session_state"}
+_IDENTITY_SECTIONS = {"harness", "user", "config", "session_state", "system"}
 
 router = APIRouter(prefix="/session", tags=["session"])
 
@@ -128,15 +128,23 @@ def open_session(
         except Exception:
             pass # invalid/expired token → continue as demo mode
 
+    # ---- Reject concurrent open for the same vault (409 if active session exists) ----
+    existing_holder = get_lock_holder(token_id)
+    if existing_holder:
+        from api.session_store import get_session as _get_session
+        if _get_session(existing_holder):  # non-expired → active
+            raise HTTPException(
+                status_code=409,
+                detail=f"Token {token_id} already has an active session. "
+                "Close the existing session before opening a new one.",
+            )
+        # Stale / expired lock — evict before proceeding
+        close_session(existing_holder)
+
     # ---- Derive IKM from passphrase ----
     if not req.passphrase or len(req.passphrase) < 8:
         raise HTTPException(status_code=400, detail="Passphrase must be at least 8 characters.")
     ikm = hashlib.sha256(req.passphrase.encode("utf-8")).digest()
-
-    # ---- Evict any stale session for this vault ----
-    existing_holder = get_lock_holder(token_id)
-    if existing_holder:
-        close_session(existing_holder)
 
     # ---- Derive purpose-separated keys (Claim 14 + Element H) ----
     try:

@@ -2,21 +2,18 @@
 api/routes/billing.py — Sovereign AI Context subscription billing (Stripe / USD only)
 
 Pricing:
- $99 one-time setup fee — mints the vault on Hedera, yours forever
- $40 /month recurring — keeps your AI context active and accessible
+ $9/month recurring — full access, no setup fee
 
 Payment path:
- Stripe hosted Checkout Session with two line items:
- 1. $99 one-time setup fee (first invoice only)
- 2. $40/month recurring subscription
+ Stripe hosted Checkout Session (mode=subscription):
+ $9/month recurring
  → webhook confirms payment → subscription marked active in Supabase
 
 Environment variables required:
  STRIPE_SECRET_KEY — Stripe secret key (sk_live_...)
  STRIPE_PUBLISHABLE_KEY — Stripe publishable key (pk_live_...)
  STRIPE_WEBHOOK_SECRET — Stripe webhook signing secret (whsec_...)
- STRIPE_SETUP_PRICE_ID — Price ID for the $99 one-time setup product
- STRIPE_MONTHLY_PRICE_ID — Price ID for the $40/month recurring product
+ STRIPE_MONTHLY_PRICE_ID — Price ID for the $9/month recurring product
 
 Supabase `subscriptions` table schema (run in Supabase SQL editor):
  create table subscriptions (
@@ -68,18 +65,12 @@ def _supabase_service():
 @limiter.limit("3/minute")
 def create_checkout(request: Request, user_id: str = Depends(get_current_user)):
     """
-    Create a Stripe Checkout Session for Sovereign AI Context onboarding.
+    Create a Stripe Checkout Session for Arty Fitchels.
 
-    Charges in a single session (mode=subscription):
-    $99 one-time setup fee — billed on the first invoice alongside month 1
-    $40/month recurring — continues automatically each month
-
-    Stripe adds the setup fee as a one-time line item to the subscription's
-    first invoice. Subsequent invoices contain only the $40/month charge.
+    Charges $9/month recurring. No setup fee.
 
     Requires env vars:
-    STRIPE_SETUP_PRICE_ID — Price ID for the $99 one-time product
-    STRIPE_MONTHLY_PRICE_ID — Price ID for the $40/month recurring product
+    STRIPE_MONTHLY_PRICE_ID — Price ID for the $9/month recurring product
 
     Returns { checkout_url } — redirect the browser here to complete payment.
     After success, Stripe redirects to /?payment=success.
@@ -88,11 +79,8 @@ def create_checkout(request: Request, user_id: str = Depends(get_current_user)):
     if user_id == "demo-user":
         raise HTTPException(400, "Cannot create a checkout session in demo mode.")
     stripe = _get_stripe()
-    setup_price_id = os.getenv("STRIPE_SETUP_PRICE_ID")
     monthly_price_id = os.getenv("STRIPE_MONTHLY_PRICE_ID")
 
-    if not setup_price_id:
-        raise HTTPException(503, "STRIPE_SETUP_PRICE_ID not configured.")
     if not monthly_price_id:
         raise HTTPException(503, "STRIPE_MONTHLY_PRICE_ID not configured.")
 
@@ -120,19 +108,16 @@ def create_checkout(request: Request, user_id: str = Depends(get_current_user)):
             "status": "inactive",
         }).execute()
 
-    # ── Create Checkout Session (setup fee + subscription) ────────────────────
-    # Stripe supports one-time line items alongside recurring items in
-    # mode="subscription". The setup fee appears on the first invoice only.
+    # ── Create Checkout Session ────────────────────────────────────────────────
     base_url = os.getenv("FRONTEND_URL", "http://localhost:8001").rstrip("/")
     session = stripe.checkout.Session.create(
         customer=customer_id,
         mode="subscription",
         line_items=[
-            {"price": setup_price_id, "quantity": 1}, # $99 one-time
-            {"price": monthly_price_id, "quantity": 1}, # $40/month
+            {"price": monthly_price_id, "quantity": 1},  # $9/month
         ],
-        success_url=f"{base_url}/?payment=success",
-        cancel_url=f"{base_url}/?payment=cancelled",
+        success_url=f"{base_url}/onboarding?payment=success",
+        cancel_url=f"{base_url}/onboarding?payment=cancelled",
         metadata={"user_id": user_id},
     )
 
@@ -215,6 +200,47 @@ async def stripe_webhook(request: Request):
     return {"received": True}
 
 
+# ── POST /billing/portal ──────────────────────────────────────────────────────
+
+@router.post("/portal")
+@limiter.limit("5/minute")
+def billing_portal(request: Request, user_id: str = Depends(get_current_user)):
+    """
+    Create a Stripe Customer Portal session for the authenticated user.
+    Returns { portal_url } — redirect the browser here to manage billing.
+    Only available for users with a Stripe customer ID (paid subscribers).
+    Founding members without a Stripe customer ID receive a 404.
+    """
+    if user_id == "demo-user":
+        raise HTTPException(400, "Not available in demo mode.")
+
+    stripe = _get_stripe()
+    sb = _supabase_service()
+
+    try:
+        result = (
+            sb.table("subscriptions")
+            .select("stripe_customer_id")
+            .eq("user_id", user_id)
+            .single()
+            .execute()
+        )
+        customer_id = (result.data or {}).get("stripe_customer_id")
+    except Exception:
+        customer_id = None
+
+    if not customer_id:
+        raise HTTPException(404, "No billing account found.")
+
+    base_url = os.getenv("FRONTEND_URL", "http://localhost:8001").rstrip("/")
+    session = stripe.billing_portal.Session.create(
+        customer=customer_id,
+        return_url=f"{base_url}/settings",
+    )
+
+    return {"portal_url": session.url}
+
+
 # ── GET /billing/status ────────────────────────────────────────────────────────
 
 @router.get("/status")
@@ -242,6 +268,7 @@ def billing_status(user_id: str = Depends(get_current_user)):
 
     return {
         "status": data.get("status", "inactive"),
+        "plan": data.get("plan", "monthly"),
         "current_period_end": data.get("current_period_end"),
     }
 

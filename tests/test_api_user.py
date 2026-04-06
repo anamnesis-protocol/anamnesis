@@ -120,11 +120,11 @@ class TestProvisionComplete:
         assert resp.status_code == 200, resp.text
         data = resp.json()
         assert data["token_id"] == TOKEN_ID
-        assert set(data["sections_pushed"]) == {"harness", "user", "config", "session_state"}
+        assert set(data["sections_pushed"]) == {"harness", "user", "config", "session_state", "system"}
         assert data["index_file_id"] == INDEX_FILE_ID
         assert data["vault_registered"] is True
 
-    def test_pushes_all_four_identity_sections(self, mocker):
+    def test_pushes_all_five_identity_sections(self, mocker):
         _do_start(mocker)
         _mock_provision_complete(mocker)
         resp = client.post("/user/provision/complete", json={
@@ -132,7 +132,7 @@ class TestProvisionComplete:
             "passphrase": PASSPHRASE,
         })
         assert set(resp.json()["sections_pushed"]) == {
-            "harness", "user", "config", "session_state"
+            "harness", "user", "config", "session_state", "system"
         }
 
     def test_no_pending_provision_returns_404(self, mocker):

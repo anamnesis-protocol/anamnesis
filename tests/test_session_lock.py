@@ -246,7 +246,7 @@ class TestConcurrentSessionHttp:
                 "/session/open",
                 json={
                     "token_id": TOKEN,
-                    "wallet_signature_hex": "ab" * 64,
+                    "passphrase": "test-passphrase-long-enough",
                     "serial": 1,
                 },
             )

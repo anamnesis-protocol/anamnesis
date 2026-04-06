@@ -92,9 +92,10 @@ class ErrorResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 class ProvisionStartRequest(BaseModel):
- account_id: str = Field(
+ account_id: str | None = Field(
+ default=None,
  description="User's Hedera account ID (e.g. '0.0.12345'). "
- "Context token will be minted under the operator treasury and associated to this account."
+ "If omitted, a new account is created automatically using the operator account.",
  )
  companion_name: str = Field(
  default="Assistant",
@@ -104,6 +105,7 @@ class ProvisionStartRequest(BaseModel):
 
 class ProvisionStartResponse(BaseModel):
  token_id: str = Field(description="Newly minted context token ID. Use this in /provision/complete.")
+ account_id: str = Field(description="Hedera account ID associated with this companion (auto-created or provided).")
  challenge_hex: str = Field(
  description=(
  "Hex-encoded challenge bytes for the wallet to sign. "

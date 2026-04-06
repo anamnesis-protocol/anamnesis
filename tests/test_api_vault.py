@@ -336,3 +336,134 @@ def _make_session(session_id: str, extra_section_ids: dict | None = None) -> Ses
                                                                                                                                     from src.vault import unbundle_to_dict
                                                                                                                                     result = unbundle_to_dict(bundle)
                                                                                                                                     assert result == files
+
+
+# ---------------------------------------------------------------------------
+# POST /vault/upgrade — add system section to existing vaults
+# ---------------------------------------------------------------------------
+
+TOKEN_UPGRADE = "0.0.99999"
+_SIG_UPGRADE = b"\xca\xfe\xba\xbe" * 16
+_INFO_SECTION = b"sovereign-ai-section-v1"
+_INFO_INDEX = b"sovereign-ai-index-v1"
+_SEC_KEY = derive_key(TOKEN_UPGRADE, _SIG_UPGRADE, info=_INFO_SECTION)
+_IDX_KEY = derive_key(TOKEN_UPGRADE, _SIG_UPGRADE, info=_INFO_INDEX)
+
+
+def _make_upgrade_session(session_id: str, has_system: bool = False) -> Session:
+    """Insert a session that is missing (or already has) the system section."""
+    now = datetime.now(timezone.utc)
+    full_ids: dict = {
+        "harness": "0.0.2001",
+        "user": "0.0.2002",
+        "config": "0.0.2003",
+        "session_state": "0.0.2004",
+    }
+    if has_system:
+        full_ids["system"] = "0.0.2005"
+
+    session = Session(
+        session_id=session_id,
+        token_id=TOKEN_UPGRADE,
+        serial=1,
+        section_key=bytearray(_SEC_KEY),
+        index_key=bytearray(_IDX_KEY),
+        index_file_id="0.0.9999",
+        full_section_ids=full_ids,
+        start_hashes={k: "abc" for k in full_ids if k != "system"},
+        sections_loaded=[k for k in full_ids if k != "system"],
+        context_sections={k: f"# {k.title()}" for k in full_ids if k != "system"},
+        created_at=now,
+        expires_at=now + timedelta(hours=4),
+    )
+    _store[session_id] = session
+    return session
+
+
+class TestVaultUpgrade:
+    SID = "upgrade-test-session-001"
+
+    def setup_method(self):
+        _store.clear()
+
+    def teardown_method(self):
+        _store.clear()
+
+    def test_upgrade_adds_system_section(self):
+        """Upgrade endpoint should push system section and update session state."""
+        _make_upgrade_session(self.SID)
+        with (
+            patch("api.routes.vault._push_section", return_value="0.0.3001") as mock_push,
+            patch("api.routes.vault._update_index") as mock_idx,
+            patch("api.routes.vault.log_event"),
+        ):
+            resp = client.post(f"/vault/upgrade?session_id={self.SID}")
+
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["status"] == "upgraded"
+        assert body["section"] == "system"
+        assert body["file_id"] == "0.0.3001"
+        mock_push.assert_called_once()
+        mock_idx.assert_called_once()
+
+    def test_upgrade_updates_session_in_memory(self):
+        """After upgrade, the session should have system in context_sections and sections_loaded."""
+        _make_upgrade_session(self.SID)
+        with (
+            patch("api.routes.vault._push_section", return_value="0.0.3002"),
+            patch("api.routes.vault._update_index"),
+            patch("api.routes.vault.log_event"),
+        ):
+            client.post(f"/vault/upgrade?session_id={self.SID}")
+
+        session = _store[self.SID]
+        assert "system" in session.context_sections
+        assert "system" in session.sections_loaded
+        assert session.full_section_ids["system"] == "0.0.3002"
+        assert "system" in session.start_hashes
+        # Content should reference vault/MCP/RAG
+        assert "Vault" in session.context_sections["system"] or "vault" in session.context_sections["system"].lower()
+
+    def test_upgrade_idempotent_when_system_already_present(self):
+        """Calling upgrade on a vault that already has the system section is a no-op."""
+        _make_upgrade_session(self.SID, has_system=True)
+        with (
+            patch("api.routes.vault._push_section") as mock_push,
+            patch("api.routes.vault._update_index") as mock_idx,
+        ):
+            resp = client.post(f"/vault/upgrade?session_id={self.SID}")
+
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "already_present"
+        mock_push.assert_not_called()
+        mock_idx.assert_not_called()
+
+    def test_upgrade_missing_session_returns_404(self):
+        resp = client.post("/vault/upgrade?session_id=no-such-session")
+        assert resp.status_code == 404
+
+    def test_upgrade_hfs_failure_returns_502(self):
+        """If HFS push fails, the endpoint should return 502 (not 500)."""
+        _make_upgrade_session(self.SID)
+        with (
+            patch("api.routes.vault._push_section", side_effect=RuntimeError("HFS unavailable")),
+            patch("api.routes.vault.log_event"),
+        ):
+            resp = client.post(f"/vault/upgrade?session_id={self.SID}")
+
+        assert resp.status_code == 502
+        assert "HFS" in resp.json()["detail"]
+
+    def test_upgrade_hcs_failure_is_nonfatal(self):
+        """HCS log failure should not prevent a successful upgrade."""
+        _make_upgrade_session(self.SID)
+        with (
+            patch("api.routes.vault._push_section", return_value="0.0.3003"),
+            patch("api.routes.vault._update_index"),
+            patch("api.routes.vault.log_event", side_effect=RuntimeError("HCS down")),
+        ):
+            resp = client.post(f"/vault/upgrade?session_id={self.SID}")
+
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "upgraded"

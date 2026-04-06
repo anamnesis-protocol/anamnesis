@@ -29,6 +29,10 @@ os.environ.setdefault("OPERATOR_KEY", "302e020100300506032b657004220420" + "a" *
 
 from api.main import app # noqa: E402
 
+# load_dotenv(override=True) in api/main.py overwrites env vars set above.
+# Force-reset the JWT secret after import so auth decodes test tokens correctly.
+os.environ["SUPABASE_JWT_SECRET"] = "test-jwt-secret-that-is-long-enough-32b"
+
 client = TestClient(app, raise_server_exceptions=False)
 
 
