@@ -145,6 +145,7 @@ class TestProvisionComplete:
             "config",
             "session_state",
             "system",
+            "credentials",
         }
         assert data["index_file_id"] == INDEX_FILE_ID
         assert data["vault_registered"] is True
@@ -165,6 +166,7 @@ class TestProvisionComplete:
             "config",
             "session_state",
             "system",
+            "credentials",
         }
 
     def test_no_pending_provision_returns_404(self, mocker):
