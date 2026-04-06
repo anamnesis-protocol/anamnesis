@@ -257,7 +257,7 @@ def billing_status(user_id: str = Depends(get_current_user)):
     try:
         result = (
             sb.table("subscriptions")
-            .select("status, current_period_end")
+            .select("status, plan, current_period_end, trial_ends_at")
             .eq("user_id", user_id)
             .single()
             .execute()
@@ -266,10 +266,28 @@ def billing_status(user_id: str = Depends(get_current_user)):
     except Exception:
         data = {}
 
+    status = data.get("status", "inactive")
+
+    # Normalise trial status — treat as active if within trial window
+    if status == "trial":
+        trial_ends_at = data.get("trial_ends_at")
+        if trial_ends_at:
+            from datetime import datetime, timezone
+            try:
+                ends = datetime.fromisoformat(trial_ends_at.replace("Z", "+00:00"))
+                if datetime.now(timezone.utc) < ends:
+                    status = "active"
+                else:
+                    status = "inactive"  # trial expired
+            except Exception:
+                status = "inactive"
+        else:
+            status = "inactive"
+
     return {
-        "status": data.get("status", "inactive"),
+        "status": status,
         "plan": data.get("plan", "monthly"),
-        "current_period_end": data.get("current_period_end"),
+        "current_period_end": data.get("current_period_end") or data.get("trial_ends_at"),
     }
 
 

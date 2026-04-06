@@ -610,9 +610,12 @@ def save_local_index(data: dict) -> None:
     integrity_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
     cache_with_hash = {**data, "_integrity": integrity_hash}
 
-    with open(VAULT_INDEX_CACHE, "w", encoding="utf-8") as f:
-        json.dump(cache_with_hash, f, indent=2)
-    print(f" Local index cache updated: {VAULT_INDEX_CACHE}")
+    try:
+        with open(VAULT_INDEX_CACHE, "w", encoding="utf-8") as f:
+            json.dump(cache_with_hash, f, indent=2)
+        print(f" Local index cache updated: {VAULT_INDEX_CACHE}")
+    except PermissionError:
+        print(f" Warning: could not update local index cache (permission denied): {VAULT_INDEX_CACHE}")
 
 
 # ---------------------------------------------------------------------------
