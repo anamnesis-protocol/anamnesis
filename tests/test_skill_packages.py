@@ -20,7 +20,6 @@ from src.skill_packages import (
     push_skill_index,
 )
 
-
 # ---------------------------------------------------------------------------
 # Shared fixtures
 # ---------------------------------------------------------------------------
@@ -68,6 +67,7 @@ def _make_skill(**kwargs) -> SkillPackage:
 # SkillPackage dataclass
 # ---------------------------------------------------------------------------
 
+
 class TestSkillPackage:
     def test_to_mcp_tool_required_keys(self):
         skill = _make_skill()
@@ -113,6 +113,7 @@ class TestSkillPackage:
 # ---------------------------------------------------------------------------
 # query_skills — mocks _load_skill_index
 # ---------------------------------------------------------------------------
+
 
 class TestQuerySkills:
     def _patch_index(self, index_data: dict):
@@ -162,10 +163,7 @@ class TestQuerySkills:
         assert len(results) == 1
 
     def test_limit_respected(self):
-        many_skills = [
-            {**SKILL_ENTRY, "id": f"skill-{i}", "name": f"skill_{i}"}
-            for i in range(10)
-        ]
+        many_skills = [{**SKILL_ENTRY, "id": f"skill-{i}", "name": f"skill_{i}"} for i in range(10)]
         index = {**FULL_INDEX, "skills": many_skills}
         with self._patch_index(index):
             results = query_skills(FAKE_TOKEN, limit=3)
@@ -196,14 +194,18 @@ IO_PATCHES = [
 @pytest.fixture
 def mock_io():
     """Patch all HFS + index I/O for skill_packages."""
-    with patch("src.skill_packages.get_package_key", return_value=FAKE_KEY), \
-         patch("src.skill_packages.store_context", return_value=FAKE_FILE_ID), \
-         patch("src.skill_packages.update_context", return_value=FAKE_FILE_ID), \
-         patch("src.skill_packages.load_local_index", return_value={}), \
-         patch("src.skill_packages.save_local_index"), \
-         patch("src.skill_packages.log_event"), \
-         patch("src.skill_packages._load_skill_index",
-               return_value={"version": "1.0", "last_updated": "", "skills": []}):
+    with (
+        patch("src.skill_packages.get_package_key", return_value=FAKE_KEY),
+        patch("src.skill_packages.store_context", return_value=FAKE_FILE_ID),
+        patch("src.skill_packages.update_context", return_value=FAKE_FILE_ID),
+        patch("src.skill_packages.load_local_index", return_value={}),
+        patch("src.skill_packages.save_local_index"),
+        patch("src.skill_packages.log_event"),
+        patch(
+            "src.skill_packages._load_skill_index",
+            return_value={"version": "1.0", "last_updated": "", "skills": []},
+        ),
+    ):
         yield
 
 
@@ -250,13 +252,15 @@ class TestSaveSkill:
         }
         existing_index = {"version": "1.0", "last_updated": "", "skills": [existing_entry]}
 
-        with patch("src.skill_packages.get_package_key", return_value=FAKE_KEY), \
-             patch("src.skill_packages.store_context", return_value=FAKE_FILE_ID), \
-             patch("src.skill_packages.update_context", return_value=FAKE_FILE_ID), \
-             patch("src.skill_packages.load_local_index", return_value={}), \
-             patch("src.skill_packages.save_local_index"), \
-             patch("src.skill_packages.log_event"), \
-             patch("src.skill_packages._load_skill_index", return_value=existing_index):
+        with (
+            patch("src.skill_packages.get_package_key", return_value=FAKE_KEY),
+            patch("src.skill_packages.store_context", return_value=FAKE_FILE_ID),
+            patch("src.skill_packages.update_context", return_value=FAKE_FILE_ID),
+            patch("src.skill_packages.load_local_index", return_value={}),
+            patch("src.skill_packages.save_local_index"),
+            patch("src.skill_packages.log_event"),
+            patch("src.skill_packages._load_skill_index", return_value=existing_index),
+        ):
 
             skill = save_skill(
                 name="analyze_contract",
@@ -273,13 +277,15 @@ class TestSaveSkill:
         existing_entry = {**SKILL_ENTRY, "id": "skill-upd", "file_id": "0.0.existing"}
         existing_index = {"version": "1.0", "last_updated": "", "skills": [existing_entry]}
 
-        with patch("src.skill_packages.get_package_key", return_value=FAKE_KEY) as _, \
-             patch("src.skill_packages.update_context", return_value="0.0.existing") as mock_update, \
-             patch("src.skill_packages.store_context", return_value=FAKE_FILE_ID) as mock_store, \
-             patch("src.skill_packages.load_local_index", return_value={}), \
-             patch("src.skill_packages.save_local_index"), \
-             patch("src.skill_packages.log_event"), \
-             patch("src.skill_packages._load_skill_index", return_value=existing_index):
+        with (
+            patch("src.skill_packages.get_package_key", return_value=FAKE_KEY) as _,
+            patch("src.skill_packages.update_context", return_value="0.0.existing") as mock_update,
+            patch("src.skill_packages.store_context", return_value=FAKE_FILE_ID) as mock_store,
+            patch("src.skill_packages.load_local_index", return_value={}),
+            patch("src.skill_packages.save_local_index"),
+            patch("src.skill_packages.log_event"),
+            patch("src.skill_packages._load_skill_index", return_value=existing_index),
+        ):
 
             save_skill(
                 name="analyze_contract",
@@ -300,16 +306,19 @@ class TestSaveSkill:
 # delete_skill
 # ---------------------------------------------------------------------------
 
+
 class TestDeleteSkill:
     def test_deletes_existing_skill(self):
         existing_index = {"version": "1.0", "last_updated": "", "skills": [SKILL_ENTRY]}
 
-        with patch("src.skill_packages.get_package_key", return_value=FAKE_KEY), \
-             patch("src.skill_packages.store_context", return_value=FAKE_INDEX_FILE_ID), \
-             patch("src.skill_packages.update_context", return_value=FAKE_INDEX_FILE_ID), \
-             patch("src.skill_packages.load_local_index", return_value={}), \
-             patch("src.skill_packages.save_local_index"), \
-             patch("src.skill_packages._load_skill_index", return_value=existing_index):
+        with (
+            patch("src.skill_packages.get_package_key", return_value=FAKE_KEY),
+            patch("src.skill_packages.store_context", return_value=FAKE_INDEX_FILE_ID),
+            patch("src.skill_packages.update_context", return_value=FAKE_INDEX_FILE_ID),
+            patch("src.skill_packages.load_local_index", return_value={}),
+            patch("src.skill_packages.save_local_index"),
+            patch("src.skill_packages._load_skill_index", return_value=existing_index),
+        ):
 
             result = delete_skill("skill-001", FAKE_TOKEN)
 
@@ -318,12 +327,14 @@ class TestDeleteSkill:
     def test_nonexistent_skill_returns_false(self):
         empty_index = {"version": "1.0", "last_updated": "", "skills": []}
 
-        with patch("src.skill_packages.get_package_key", return_value=FAKE_KEY), \
-             patch("src.skill_packages.store_context", return_value=FAKE_INDEX_FILE_ID), \
-             patch("src.skill_packages.update_context", return_value=FAKE_INDEX_FILE_ID), \
-             patch("src.skill_packages.load_local_index", return_value={}), \
-             patch("src.skill_packages.save_local_index"), \
-             patch("src.skill_packages._load_skill_index", return_value=empty_index):
+        with (
+            patch("src.skill_packages.get_package_key", return_value=FAKE_KEY),
+            patch("src.skill_packages.store_context", return_value=FAKE_INDEX_FILE_ID),
+            patch("src.skill_packages.update_context", return_value=FAKE_INDEX_FILE_ID),
+            patch("src.skill_packages.load_local_index", return_value={}),
+            patch("src.skill_packages.save_local_index"),
+            patch("src.skill_packages._load_skill_index", return_value=empty_index),
+        ):
 
             result = delete_skill("nonexistent-id", FAKE_TOKEN)
 

@@ -30,6 +30,7 @@ SECTION_FILE_IDS = {
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _mock_provision_start(mocker, token_id: str = TOKEN_ID) -> None:
     mocker.patch("api.routes.user.mint_context_token", return_value=token_id)
     mocker.patch("api.routes.user.log_event", return_value="")
@@ -39,8 +40,9 @@ def _mock_provision_complete(mocker, vault_registered: bool = True) -> None:
     mocker.patch("api.routes.user.get_validator_contract_id", return_value="0.0.99000")
     mocker.patch(
         "api.routes.user.push_section",
-        side_effect=lambda section_name, content, key, token_id, existing_file_id:
-            SECTION_FILE_IDS.get(section_name, "0.0.299999"),
+        side_effect=lambda section_name, content, key, token_id, existing_file_id: SECTION_FILE_IDS.get(
+            section_name, "0.0.299999"
+        ),
     )
     mocker.patch("api.routes.user.push_index", return_value=INDEX_FILE_ID)
     mocker.patch("api.routes.user.token_id_to_evm_address", return_value="0" * 40)
@@ -53,10 +55,13 @@ def _mock_provision_complete(mocker, vault_registered: bool = True) -> None:
 
 def _do_start(mocker, account_id: str = ACCOUNT_ID, companion: str = COMPANION) -> dict:
     _mock_provision_start(mocker)
-    resp = client.post("/user/provision/start", json={
-        "account_id": account_id,
-        "companion_name": companion,
-    })
+    resp = client.post(
+        "/user/provision/start",
+        json={
+            "account_id": account_id,
+            "companion_name": companion,
+        },
+    )
     assert resp.status_code == 200, resp.text
     return resp.json()
 
@@ -64,6 +69,7 @@ def _do_start(mocker, account_id: str = ACCOUNT_ID, companion: str = COMPANION) 
 # ---------------------------------------------------------------------------
 # /user/provision/start
 # ---------------------------------------------------------------------------
+
 
 class TestProvisionStart:
     def test_returns_token_id_and_challenge(self, mocker):
@@ -73,10 +79,13 @@ class TestProvisionStart:
 
     def test_mint_failure_returns_502(self, mocker):
         mocker.patch("api.routes.user.mint_context_token", side_effect=Exception("Hedera down"))
-        resp = client.post("/user/provision/start", json={
-            "account_id": ACCOUNT_ID,
-            "companion_name": COMPANION,
-        })
+        resp = client.post(
+            "/user/provision/start",
+            json={
+                "account_id": ACCOUNT_ID,
+                "companion_name": COMPANION,
+            },
+        )
         assert resp.status_code == 502
         assert "mint failed" in resp.json()["detail"].lower()
 
@@ -86,10 +95,13 @@ class TestProvisionStart:
             "api.routes.user.mint_context_token",
             side_effect=RuntimeError("TokenCreateTransaction failed on-chain: status=7 (code 7)"),
         )
-        resp = client.post("/user/provision/start", json={
-            "account_id": ACCOUNT_ID,
-            "companion_name": COMPANION,
-        })
+        resp = client.post(
+            "/user/provision/start",
+            json={
+                "account_id": ACCOUNT_ID,
+                "companion_name": COMPANION,
+            },
+        )
         assert resp.status_code == 502
         assert "7" in resp.json()["detail"]
 
@@ -97,10 +109,13 @@ class TestProvisionStart:
         """Two /start calls for same account create independent pending records."""
         _do_start(mocker, account_id="0.0.11111")
         _mock_provision_start(mocker, token_id="0.0.22222")
-        resp = client.post("/user/provision/start", json={
-            "account_id": "0.0.11111",
-            "companion_name": COMPANION,
-        })
+        resp = client.post(
+            "/user/provision/start",
+            json={
+                "account_id": "0.0.11111",
+                "companion_name": COMPANION,
+            },
+        )
         assert resp.status_code == 200
         assert resp.json()["token_id"] == "0.0.22222"
 
@@ -109,66 +124,95 @@ class TestProvisionStart:
 # /user/provision/complete
 # ---------------------------------------------------------------------------
 
+
 class TestProvisionComplete:
     def test_happy_path(self, mocker):
         _do_start(mocker)
         _mock_provision_complete(mocker)
-        resp = client.post("/user/provision/complete", json={
-            "token_id": TOKEN_ID,
-            "passphrase": PASSPHRASE,
-        })
+        resp = client.post(
+            "/user/provision/complete",
+            json={
+                "token_id": TOKEN_ID,
+                "passphrase": PASSPHRASE,
+            },
+        )
         assert resp.status_code == 200, resp.text
         data = resp.json()
         assert data["token_id"] == TOKEN_ID
-        assert set(data["sections_pushed"]) == {"harness", "user", "config", "session_state", "system"}
+        assert set(data["sections_pushed"]) == {
+            "harness",
+            "user",
+            "config",
+            "session_state",
+            "system",
+        }
         assert data["index_file_id"] == INDEX_FILE_ID
         assert data["vault_registered"] is True
 
     def test_pushes_all_five_identity_sections(self, mocker):
         _do_start(mocker)
         _mock_provision_complete(mocker)
-        resp = client.post("/user/provision/complete", json={
-            "token_id": TOKEN_ID,
-            "passphrase": PASSPHRASE,
-        })
+        resp = client.post(
+            "/user/provision/complete",
+            json={
+                "token_id": TOKEN_ID,
+                "passphrase": PASSPHRASE,
+            },
+        )
         assert set(resp.json()["sections_pushed"]) == {
-            "harness", "user", "config", "session_state", "system"
+            "harness",
+            "user",
+            "config",
+            "session_state",
+            "system",
         }
 
     def test_no_pending_provision_returns_404(self, mocker):
         _mock_provision_complete(mocker)
-        resp = client.post("/user/provision/complete", json={
-            "token_id": "0.0.99999",
-            "passphrase": PASSPHRASE,
-        })
+        resp = client.post(
+            "/user/provision/complete",
+            json={
+                "token_id": "0.0.99999",
+                "passphrase": PASSPHRASE,
+            },
+        )
         assert resp.status_code == 404
         assert "no pending provision" in resp.json()["detail"].lower()
 
     def test_short_passphrase_returns_400(self, mocker):
         _do_start(mocker)
-        resp = client.post("/user/provision/complete", json={
-            "token_id": TOKEN_ID,
-            "passphrase": "short",
-        })
+        resp = client.post(
+            "/user/provision/complete",
+            json={
+                "token_id": TOKEN_ID,
+                "passphrase": "short",
+            },
+        )
         assert resp.status_code == 400
 
     def test_no_contract_configured_returns_503(self, mocker):
         _do_start(mocker)
         mocker.patch("api.routes.user.get_validator_contract_id", return_value=None)
-        resp = client.post("/user/provision/complete", json={
-            "token_id": TOKEN_ID,
-            "passphrase": PASSPHRASE,
-        })
+        resp = client.post(
+            "/user/provision/complete",
+            json={
+                "token_id": TOKEN_ID,
+                "passphrase": PASSPHRASE,
+            },
+        )
         assert resp.status_code == 503
 
     def test_contract_registration_failure_returns_502(self, mocker):
         """Contract registration failure must be fatal — vault unusable without on-chain record."""
         _do_start(mocker)
         _mock_provision_complete(mocker, vault_registered=False)
-        resp = client.post("/user/provision/complete", json={
-            "token_id": TOKEN_ID,
-            "passphrase": PASSPHRASE,
-        })
+        resp = client.post(
+            "/user/provision/complete",
+            json={
+                "token_id": TOKEN_ID,
+                "passphrase": PASSPHRASE,
+            },
+        )
         assert resp.status_code == 502
         assert "contract registration failed" in resp.json()["detail"].lower()
 
@@ -176,34 +220,46 @@ class TestProvisionComplete:
         """Error detail must include token_id so user can contact support."""
         _do_start(mocker)
         _mock_provision_complete(mocker, vault_registered=False)
-        resp = client.post("/user/provision/complete", json={
-            "token_id": TOKEN_ID,
-            "passphrase": PASSPHRASE,
-        })
+        resp = client.post(
+            "/user/provision/complete",
+            json={
+                "token_id": TOKEN_ID,
+                "passphrase": PASSPHRASE,
+            },
+        )
         assert TOKEN_ID in resp.json()["detail"]
 
     def test_pending_record_cleared_after_complete(self, mocker):
         """Second /provision/complete for the same token_id must 404."""
         _do_start(mocker)
         _mock_provision_complete(mocker)
-        client.post("/user/provision/complete", json={
-            "token_id": TOKEN_ID,
-            "passphrase": PASSPHRASE,
-        })
-        resp = client.post("/user/provision/complete", json={
-            "token_id": TOKEN_ID,
-            "passphrase": PASSPHRASE,
-        })
+        client.post(
+            "/user/provision/complete",
+            json={
+                "token_id": TOKEN_ID,
+                "passphrase": PASSPHRASE,
+            },
+        )
+        resp = client.post(
+            "/user/provision/complete",
+            json={
+                "token_id": TOKEN_ID,
+                "passphrase": PASSPHRASE,
+            },
+        )
         assert resp.status_code == 404
 
     def test_hfs_push_failure_returns_502(self, mocker):
         _do_start(mocker)
         mocker.patch("api.routes.user.get_validator_contract_id", return_value="0.0.99000")
         mocker.patch("api.routes.user.push_section", side_effect=Exception("HFS down"))
-        resp = client.post("/user/provision/complete", json={
-            "token_id": TOKEN_ID,
-            "passphrase": PASSPHRASE,
-        })
+        resp = client.post(
+            "/user/provision/complete",
+            json={
+                "token_id": TOKEN_ID,
+                "passphrase": PASSPHRASE,
+            },
+        )
         assert resp.status_code == 502
         assert "hfs" in resp.json()["detail"].lower()
 
@@ -211,6 +267,7 @@ class TestProvisionComplete:
 # ---------------------------------------------------------------------------
 # mint_context_token — unit tests for status-check logic
 # ---------------------------------------------------------------------------
+
 
 class TestMintContextToken:
     def test_raises_when_create_tx_returns_non_success(self, mocker):
@@ -237,11 +294,12 @@ class TestMintContextToken:
 
         mocker.patch("src.context_token.TokenCreateTransaction", return_value=mock_tx)
         mocker.patch("src.context_token.get_client")
-        mocker.patch("src.context_token.get_treasury", return_value=(
-            mocker.MagicMock(), mocker.MagicMock()
-        ))
+        mocker.patch(
+            "src.context_token.get_treasury", return_value=(mocker.MagicMock(), mocker.MagicMock())
+        )
 
         from src.context_token import mint_context_token
+
         with pytest.raises(RuntimeError, match="TokenCreateTransaction failed"):
             mint_context_token(context_file_id="0.0.99999")
 
@@ -255,18 +313,29 @@ class TestMintContextToken:
 
         mock_tx = mocker.MagicMock()
         mock_tx.execute.return_value = mock_receipt
-        for attr in ["set_token_name", "set_token_symbol", "set_token_type", "set_supply_type",
-                     "set_max_supply", "set_initial_supply", "set_treasury_account_id",
-                     "set_supply_key", "set_memo", "freeze_with", "sign"]:
+        for attr in [
+            "set_token_name",
+            "set_token_symbol",
+            "set_token_type",
+            "set_supply_type",
+            "set_max_supply",
+            "set_initial_supply",
+            "set_treasury_account_id",
+            "set_supply_key",
+            "set_memo",
+            "freeze_with",
+            "sign",
+        ]:
             getattr(mock_tx, attr).return_value = mock_tx
 
         mocker.patch("src.context_token.TokenCreateTransaction", return_value=mock_tx)
         mocker.patch("src.context_token.get_client")
-        mocker.patch("src.context_token.get_treasury", return_value=(
-            mocker.MagicMock(), mocker.MagicMock()
-        ))
+        mocker.patch(
+            "src.context_token.get_treasury", return_value=(mocker.MagicMock(), mocker.MagicMock())
+        )
 
         from src.context_token import mint_context_token
+
         with pytest.raises(RuntimeError, match="no token_id"):
             mint_context_token(context_file_id="0.0.99999")
 
@@ -277,11 +346,14 @@ class TestMintContextToken:
 
         long_name = "A" * 200
         metadata = _build_metadata("0.0.12345", long_name)
-        assert len(metadata) <= 100, f"Metadata is {len(metadata)} bytes — exceeds Hedera 100-byte limit"
+        assert (
+            len(metadata) <= 100
+        ), f"Metadata is {len(metadata)} bytes — exceeds Hedera 100-byte limit"
 
     def test_metadata_contains_file_id(self):
         import json as _json
         from src.context_token import _build_metadata
+
         metadata = _build_metadata("0.0.12345", "TestBot")
         parsed = _json.loads(metadata.decode("utf-8"))
         assert parsed["f"] == "0.0.12345"
@@ -290,6 +362,7 @@ class TestMintContextToken:
 # ---------------------------------------------------------------------------
 # /user/{token_id}/status
 # ---------------------------------------------------------------------------
+
 
 class TestUserStatus:
     def test_registered_vault(self, mocker):

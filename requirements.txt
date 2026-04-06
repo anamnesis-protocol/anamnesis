@@ -23,6 +23,8 @@ groq>=0.8.0 # Llama 3, Mixtral via Groq
 slowapi>=0.1.9 # slowapi: Starlette/FastAPI rate limiting (limiter.py)
 # ── In-memory RAG (vault context retrieval) ────────────────────────────────────
 rank-bm25>=0.2.2 # BM25Okapi — relevance-gated vault chunk retrieval (pure Python, no ML)
+# ── MCP (Model Context Protocol) ──────────────────────────────────────────────
+mcp>=1.0.0 # MCP SDK — FastMCP server for vault tool exposure
 
 # ── Protobuf (must match hiero_sdk_python gencode version) ────────────────────
 protobuf>=6.31.1

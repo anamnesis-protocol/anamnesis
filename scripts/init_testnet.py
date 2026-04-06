@@ -52,6 +52,7 @@ def write_env(key: str, value: str) -> None:
 # Prereq check
 # ---------------------------------------------------------------------------
 
+
 def check_prereqs(force: bool) -> None:
     if not ENV_PATH.exists():
         print(f"[ERROR] {ENV_PATH} not found.")
@@ -94,9 +95,11 @@ def check_prereqs(force: bool) -> None:
 # Step 1: HCS Topic
 # ---------------------------------------------------------------------------
 
+
 def step1_create_topic() -> str:
     print("[1/2] Creating HCS audit topic on testnet...")
     from src.event_log import create_topic
+
     topic_id = create_topic()
     write_env("HCS_TOPIC_ID", topic_id)
     print(f" HCS topic: {topic_id}\n")
@@ -107,9 +110,11 @@ def step1_create_topic() -> str:
 # Step 2: Deploy ContextValidator contract
 # ---------------------------------------------------------------------------
 
+
 def step2_deploy_contract() -> str:
     print("[2/2] Deploying ContextValidator contract on testnet...")
     from src.contract import deploy_contract
+
     contract_id = deploy_contract()
     write_env("VALIDATOR_CONTRACT_ID", contract_id)
     print(f" Contract: {contract_id}\n")
@@ -120,9 +125,12 @@ def step2_deploy_contract() -> str:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
     parser = argparse.ArgumentParser(description="Sovereign AI Context — testnet demo setup")
-    parser.add_argument("--force", action="store_true", help="Overwrite existing IDs in .env.testnet")
+    parser.add_argument(
+        "--force", action="store_true", help="Overwrite existing IDs in .env.testnet"
+    )
     args = parser.parse_args()
 
     print("=" * 60)

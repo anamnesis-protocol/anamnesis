@@ -21,10 +21,10 @@ from api.mcp_server import (
     _active_session,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _reset_active_session():
     """Clear the module-level active session state between tests."""
@@ -45,6 +45,7 @@ FAKE_TOKEN_ID = "0.0.88888"
 # ---------------------------------------------------------------------------
 # update_vault_section — pure local state, no _api call
 # ---------------------------------------------------------------------------
+
 
 class TestUpdateVaultSection:
     def test_queues_update_locally(self):
@@ -85,12 +86,19 @@ class TestUpdateVaultSection:
 # list_skills — calls _api
 # ---------------------------------------------------------------------------
 
+
 class TestListSkills:
     def test_returns_skills_from_api(self):
         api_response = {
             "token_id": FAKE_TOKEN_ID,
             "skills": [
-                {"id": "s1", "name": "my_skill", "description": "does X", "tags": [], "version": "1.0.0"},
+                {
+                    "id": "s1",
+                    "name": "my_skill",
+                    "description": "does X",
+                    "tags": [],
+                    "version": "1.0.0",
+                },
             ],
         }
         with patch("api.mcp_server._api", return_value=api_response):
@@ -108,14 +116,13 @@ class TestListSkills:
     def test_api_called_with_correct_params(self):
         with patch("api.mcp_server._api", return_value={"skills": []}) as mock_api:
             list_skills(FAKE_SESSION_ID)
-        mock_api.assert_called_once_with(
-            "get", "/skills", params={"session_id": FAKE_SESSION_ID}
-        )
+        mock_api.assert_called_once_with("get", "/skills", params={"session_id": FAKE_SESSION_ID})
 
 
 # ---------------------------------------------------------------------------
 # save_skill_to_vault — JSON parsing + _api call
 # ---------------------------------------------------------------------------
+
 
 class TestSaveSkillToVault:
     def test_valid_json_schema_parsed(self):
@@ -174,7 +181,12 @@ class TestSaveSkillToVault:
         assert payload["tags"] == []
 
     def test_skill_id_included_when_provided(self):
-        api_response = {"skill_id": "existing-id", "name": "test", "version": "1.0.1", "message": "updated"}
+        api_response = {
+            "skill_id": "existing-id",
+            "name": "test",
+            "version": "1.0.1",
+            "message": "updated",
+        }
         with patch("api.mcp_server._api", return_value=api_response) as mock_api:
             save_skill_to_vault(
                 session_id=FAKE_SESSION_ID,
@@ -188,7 +200,12 @@ class TestSaveSkillToVault:
         assert payload["skill_id"] == "existing-id"
 
     def test_skill_id_omitted_when_empty(self):
-        api_response = {"skill_id": "new-id", "name": "test", "version": "1.0.0", "message": "created"}
+        api_response = {
+            "skill_id": "new-id",
+            "name": "test",
+            "version": "1.0.0",
+            "message": "created",
+        }
         with patch("api.mcp_server._api", return_value=api_response) as mock_api:
             save_skill_to_vault(
                 session_id=FAKE_SESSION_ID,
@@ -205,6 +222,7 @@ class TestSaveSkillToVault:
 # ---------------------------------------------------------------------------
 # _load_session_skills
 # ---------------------------------------------------------------------------
+
 
 class TestLoadSessionSkills:
     def test_returns_tools_list(self):
@@ -228,6 +246,7 @@ class TestLoadSessionSkills:
 # _register_dynamic_skill
 # ---------------------------------------------------------------------------
 
+
 class TestRegisterDynamicSkill:
     def test_handler_returns_correct_shape(self):
         tool_def = {
@@ -246,6 +265,7 @@ class TestRegisterDynamicSkill:
                 nonlocal captured_handler
                 captured_handler = fn
                 return fn
+
             return _decorator
 
         with patch.object(mcp_mod.mcp, "tool", side_effect=_capture_tool):
@@ -272,6 +292,7 @@ class TestRegisterDynamicSkill:
                 nonlocal captured_fn
                 captured_fn = fn
                 return fn
+
             return _decorator
 
         with patch.object(mcp_mod.mcp, "tool", side_effect=_capture_tool):
@@ -293,6 +314,7 @@ class TestRegisterDynamicSkill:
                 nonlocal captured_fn
                 captured_fn = fn
                 return fn
+
             return _decorator
 
         with patch.object(mcp_mod.mcp, "tool", side_effect=_capture_tool):
@@ -305,14 +327,17 @@ class TestRegisterDynamicSkill:
 # register_session_skills
 # ---------------------------------------------------------------------------
 
+
 class TestRegisterSessionSkills:
     def test_returns_count_of_loaded_skills(self):
         tools = [
             {"name": "skill_a", "_instructions": "a", "description": "A", "inputSchema": {}},
             {"name": "skill_b", "_instructions": "b", "description": "B", "inputSchema": {}},
         ]
-        with patch("api.mcp_server._load_session_skills", return_value=tools), \
-             patch("api.mcp_server._register_dynamic_skill") as mock_reg:
+        with (
+            patch("api.mcp_server._load_session_skills", return_value=tools),
+            patch("api.mcp_server._register_dynamic_skill") as mock_reg,
+        ):
             count = register_session_skills(FAKE_SESSION_ID)
 
         assert count == 2
@@ -321,15 +346,22 @@ class TestRegisterSessionSkills:
     def test_bad_skill_skipped_does_not_raise(self):
         tools = [
             {"name": "good_skill", "_instructions": "ok", "description": "ok", "inputSchema": {}},
-            {"name": "bad_skill", "_instructions": "fail", "description": "fail", "inputSchema": {}},
+            {
+                "name": "bad_skill",
+                "_instructions": "fail",
+                "description": "fail",
+                "inputSchema": {},
+            },
         ]
 
         def _register_with_failure(tool_def):
             if tool_def["name"] == "bad_skill":
                 raise RuntimeError("registration failed")
 
-        with patch("api.mcp_server._load_session_skills", return_value=tools), \
-             patch("api.mcp_server._register_dynamic_skill", side_effect=_register_with_failure):
+        with (
+            patch("api.mcp_server._load_session_skills", return_value=tools),
+            patch("api.mcp_server._register_dynamic_skill", side_effect=_register_with_failure),
+        ):
             count = register_session_skills(FAKE_SESSION_ID)  # should not raise
 
         assert count == 2  # both attempted; count is total not successful

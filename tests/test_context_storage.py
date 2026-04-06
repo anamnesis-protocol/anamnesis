@@ -33,7 +33,7 @@ class TestCryptoLayerOnly:
 
         chunks = []
         for i in range(0, len(ciphertext), _CHUNK_SIZE):
-            chunks.append(ciphertext[i: i + _CHUNK_SIZE])
+            chunks.append(ciphertext[i : i + _CHUNK_SIZE])
 
         # Reassemble
         reassembled = b"".join(chunks)
@@ -43,7 +43,7 @@ class TestCryptoLayerOnly:
 
 @pytest.mark.skipif(
     os.getenv("HEDERA_NETWORK", "mock") == "mock",
-    reason="Requires live Hedera testnet credentials in .env"
+    reason="Requires live Hedera testnet credentials in .env",
 )
 class TestContextStorageNetwork:
     """Integration tests — require HEDERA_NETWORK=testnet and valid .env."""

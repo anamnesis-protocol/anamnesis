@@ -58,13 +58,19 @@ from typing import Optional
 
 from src.context_storage import store_context, load_context, update_context
 from src.crypto import compress, decompress
-from src.vault import get_package_key, _make_package_aad, _make_package_index_aad, load_local_index, save_local_index
+from src.vault import (
+    get_package_key,
+    _make_package_aad,
+    _make_package_index_aad,
+    load_local_index,
+    save_local_index,
+)
 from src.event_log import log_event
-
 
 # ---------------------------------------------------------------------------
 # Skill metadata model
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class SkillMetadata:
@@ -143,6 +149,7 @@ def _load_skill_index(token_id: str) -> dict:
 # Push a skill to HFS
 # ---------------------------------------------------------------------------
 
+
 def push_skill(
     skill: SkillPackage,
     token_id: str,
@@ -179,6 +186,7 @@ def push_skill(
 # Pull a skill from HFS
 # ---------------------------------------------------------------------------
 
+
 def pull_skill(file_id: str, token_id: str, skill_name: str) -> SkillPackage:
     """
     Load and decrypt a skill package from HFS.
@@ -194,6 +202,7 @@ def pull_skill(file_id: str, token_id: str, skill_name: str) -> SkillPackage:
 # ---------------------------------------------------------------------------
 # Query skill index by tags or name
 # ---------------------------------------------------------------------------
+
 
 def query_skills(
     token_id: str,
@@ -218,15 +227,17 @@ def query_skills(
         if name_contains:
             if name_contains.lower() not in entry.get("name", "").lower():
                 continue
-        results.append(SkillMetadata(
-            id=entry["id"],
-            name=entry["name"],
-            description=entry.get("description", ""),
-            tags=entry.get("tags", []),
-            file_id=entry["file_id"],
-            version=entry.get("version", "1.0.0"),
-            created_at=entry.get("created_at", ""),
-        ))
+        results.append(
+            SkillMetadata(
+                id=entry["id"],
+                name=entry["name"],
+                description=entry.get("description", ""),
+                tags=entry.get("tags", []),
+                file_id=entry["file_id"],
+                version=entry.get("version", "1.0.0"),
+                created_at=entry.get("created_at", ""),
+            )
+        )
         if len(results) >= limit:
             break
 
@@ -236,6 +247,7 @@ def query_skills(
 # ---------------------------------------------------------------------------
 # Push skill index to HFS
 # ---------------------------------------------------------------------------
+
 
 def push_skill_index(skills: list[SkillMetadata], token_id: str) -> str:
     """
@@ -270,6 +282,7 @@ def push_skill_index(skills: list[SkillMetadata], token_id: str) -> str:
 # ---------------------------------------------------------------------------
 # Save or update a skill (push + update index)
 # ---------------------------------------------------------------------------
+
 
 def save_skill(
     name: str,
@@ -320,15 +333,19 @@ def save_skill(
 
     # Update index
     skill_entries = [s for s in index.get("skills", []) if s.get("id") != skill_id]
-    skill_entries.append(asdict(SkillMetadata(
-        id=skill.id,
-        name=skill.name,
-        description=skill.description,
-        tags=skill.tags,
-        file_id=file_id,
-        version=skill.version,
-        created_at=skill.created_at,
-    )))
+    skill_entries.append(
+        asdict(
+            SkillMetadata(
+                id=skill.id,
+                name=skill.name,
+                description=skill.description,
+                tags=skill.tags,
+                file_id=file_id,
+                version=skill.version,
+                created_at=skill.created_at,
+            )
+        )
+    )
 
     skills_meta = [SkillMetadata(**s) for s in skill_entries]
     push_skill_index(skills_meta, token_id)
@@ -339,6 +356,7 @@ def save_skill(
 # ---------------------------------------------------------------------------
 # Delete a skill from the index (does not remove HFS file — HFS is immutable)
 # ---------------------------------------------------------------------------
+
 
 def delete_skill(skill_id: str, token_id: str) -> bool:
     """

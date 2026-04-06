@@ -24,14 +24,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from src.memory_packages import (
- PACKAGE_CATEGORIES,
- pull_package,
- pull_package_index,
- pull_packages_parallel,
- query_packages,
+    PACKAGE_CATEGORIES,
+    pull_package,
+    pull_package_index,
+    pull_packages_parallel,
+    query_packages,
 )
 from src.vault import get_package_key, load_local_index, CONTEXT_TOKEN_ID
 
@@ -148,7 +149,7 @@ Examples:
     )
 
     print(f"\n" + "=" * 70)
-    print(f" QUERY: \"{args.query}\"")
+    print(f' QUERY: "{args.query}"')
     print(f" threshold={args.threshold} top={args.top}")
     print("=" * 70)
 

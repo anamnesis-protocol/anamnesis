@@ -19,12 +19,13 @@ os.environ.setdefault("HEDERA_NETWORK", "testnet")
 os.environ.setdefault("OPERATOR_ID", "0.0.1234")
 os.environ.setdefault("OPERATOR_KEY", "302e020100300506032b657004220420" + "a" * 64)
 
-from api.main import app # noqa: E402
+from api.main import app  # noqa: E402
 
 client = TestClient(app)
 
 
 # ── Session fixture ────────────────────────────────────────────────────────────
+
 
 def _make_session(user_id: str = "", user_api_keys=None) -> MagicMock:
     """Build a mock Session with minimal required fields."""
@@ -47,6 +48,7 @@ def _make_session(user_id: str = "", user_api_keys=None) -> MagicMock:
 
 # ── GET /chat/models ───────────────────────────────────────────────────────────
 
+
 class TestListModels:
     def test_no_session_id_returns_env_models(self, monkeypatch):
         """No session_id → demo mode → returns models from env."""
@@ -60,8 +62,14 @@ class TestListModels:
 
     def test_no_env_keys_returns_empty_with_message(self, monkeypatch):
         """No env keys and no session → empty model list with guidance message."""
-        for key in ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY",
-                    "MISTRAL_API_KEY", "GROQ_API_KEY", "OLLAMA_BASE_URL"]:
+        for key in [
+            "OPENAI_API_KEY",
+            "ANTHROPIC_API_KEY",
+            "GOOGLE_API_KEY",
+            "MISTRAL_API_KEY",
+            "GROQ_API_KEY",
+            "OLLAMA_BASE_URL",
+        ]:
             monkeypatch.delenv(key, raising=False)
         res = client.get("/chat/models")
         assert res.status_code == 200
@@ -71,8 +79,14 @@ class TestListModels:
 
     def test_with_valid_session_uses_user_keys(self, monkeypatch):
         """Valid session → uses session.user_api_keys."""
-        for key in ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY",
-                    "MISTRAL_API_KEY", "GROQ_API_KEY", "OLLAMA_BASE_URL"]:
+        for key in [
+            "OPENAI_API_KEY",
+            "ANTHROPIC_API_KEY",
+            "GOOGLE_API_KEY",
+            "MISTRAL_API_KEY",
+            "GROQ_API_KEY",
+            "OLLAMA_BASE_URL",
+        ]:
             monkeypatch.delenv(key, raising=False)
 
         mock_session = _make_session(user_id="real-user", user_api_keys={"anthropic": "sk-ant-key"})
@@ -97,8 +111,14 @@ class TestListModels:
 
     def test_byok_empty_keys_returns_no_models(self, monkeypatch):
         """User session with empty keys → empty model list with BYOK message."""
-        for key in ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY",
-                    "MISTRAL_API_KEY", "GROQ_API_KEY", "OLLAMA_BASE_URL"]:
+        for key in [
+            "OPENAI_API_KEY",
+            "ANTHROPIC_API_KEY",
+            "GOOGLE_API_KEY",
+            "MISTRAL_API_KEY",
+            "GROQ_API_KEY",
+            "OLLAMA_BASE_URL",
+        ]:
             monkeypatch.delenv(key, raising=False)
 
         mock_session = _make_session(user_id="real-user", user_api_keys={})
@@ -109,29 +129,36 @@ class TestListModels:
         assert res.status_code == 200
         data = res.json()
         assert data["models"] == []
-        assert "⚙" in data.get("message", "") # BYOK guidance mentions gear icon
+        assert "⚙" in data.get("message", "")  # BYOK guidance mentions gear icon
 
 
 # ── POST /chat/recommend ───────────────────────────────────────────────────────
 
+
 class TestRecommend:
     def test_expired_session_returns_404(self):
         with patch("api.routes.chat.get_session", return_value=None):
-            res = client.post("/chat/recommend", json={
-                "session_id": "expired",
-                "message": "write some code",
-                "current_model": "gpt-4o",
-            })
+            res = client.post(
+                "/chat/recommend",
+                json={
+                    "session_id": "expired",
+                    "message": "write some code",
+                    "current_model": "gpt-4o",
+                },
+            )
             assert res.status_code == 404
 
     def test_valid_session_returns_recommendation(self):
         mock_session = _make_session(user_api_keys={"openai": "sk-key"})
         with patch("api.routes.chat.get_session", return_value=mock_session):
-            res = client.post("/chat/recommend", json={
-                "session_id": "test-session-id",
-                "message": "help me debug this python code",
-                "current_model": "gpt-4o",
-            })
+            res = client.post(
+                "/chat/recommend",
+                json={
+                    "session_id": "test-session-id",
+                    "message": "help me debug this python code",
+                    "current_model": "gpt-4o",
+                },
+            )
             assert res.status_code == 200
             data = res.json()
             assert data["task_type"] == "coding"
@@ -143,11 +170,14 @@ class TestRecommend:
         # Groq only — no vision capable model
         mock_session = _make_session(user_api_keys={"groq": "test-key"})
         with patch("api.routes.chat.get_session", return_value=mock_session):
-            res = client.post("/chat/recommend", json={
-                "session_id": "test-session-id",
-                "message": "analyze this image for me",
-                "current_model": "llama-3.3-70b-versatile",
-            })
+            res = client.post(
+                "/chat/recommend",
+                json={
+                    "session_id": "test-session-id",
+                    "message": "analyze this image for me",
+                    "current_model": "llama-3.3-70b-versatile",
+                },
+            )
             assert res.status_code == 200
             assert res.json()["cannot_complete"] is True
 
@@ -155,11 +185,14 @@ class TestRecommend:
         """Unclassified message → current model is optimal."""
         mock_session = _make_session(user_api_keys={"openai": "sk-key"})
         with patch("api.routes.chat.get_session", return_value=mock_session):
-            res = client.post("/chat/recommend", json={
-                "session_id": "test-session-id",
-                "message": "hello, how are you?",
-                "current_model": "gpt-4o",
-            })
+            res = client.post(
+                "/chat/recommend",
+                json={
+                    "session_id": "test-session-id",
+                    "message": "hello, how are you?",
+                    "current_model": "gpt-4o",
+                },
+            )
             assert res.status_code == 200
             assert res.json()["task_type"] == "general"
             assert res.json()["current_is_optimal"] is True
@@ -171,60 +204,85 @@ class TestRecommend:
 
 # ── POST /chat/message ─────────────────────────────────────────────────────────
 
+
 class TestChatMessage:
     def test_expired_session_returns_404(self):
         with patch("api.routes.chat.get_session", return_value=None):
-            res = client.post("/chat/message", json={
-                "session_id": "expired",
-                "message": "hello",
-                "model": "gpt-4o",
-            })
+            res = client.post(
+                "/chat/message",
+                json={
+                    "session_id": "expired",
+                    "message": "hello",
+                    "model": "gpt-4o",
+                },
+            )
             assert res.status_code == 404
 
     def test_empty_message_returns_400(self):
         mock_session = _make_session(user_api_keys=None)
-        with patch("api.routes.chat.get_session", return_value=mock_session), \
-                patch("api.routes.chat.get_model_meta", return_value={"provider": "openai", "env_key": "OPENAI_API_KEY", "display": "GPT-4o"}):
-            res = client.post("/chat/message", json={
-                "session_id": "test-session-id",
-                "message": " ",
-                "model": "gpt-4o",
-            })
+        with (
+            patch("api.routes.chat.get_session", return_value=mock_session),
+            patch(
+                "api.routes.chat.get_model_meta",
+                return_value={
+                    "provider": "openai",
+                    "env_key": "OPENAI_API_KEY",
+                    "display": "GPT-4o",
+                },
+            ),
+        ):
+            res = client.post(
+                "/chat/message",
+                json={
+                    "session_id": "test-session-id",
+                    "message": " ",
+                    "model": "gpt-4o",
+                },
+            )
             assert res.status_code == 400
             assert "empty" in res.json()["detail"].lower()
 
     def test_unconfigured_model_returns_400(self):
         """Model not configured for user → 400."""
-        mock_session = _make_session(user_api_keys={}) # no keys
+        mock_session = _make_session(user_api_keys={})  # no keys
         with patch("api.routes.chat.get_session", return_value=mock_session):
-            res = client.post("/chat/message", json={
-                "session_id": "test-session-id",
-                "message": "hello",
-                "model": "gpt-4o",
-            })
+            res = client.post(
+                "/chat/message",
+                json={
+                    "session_id": "test-session-id",
+                    "message": "hello",
+                    "model": "gpt-4o",
+                },
+            )
             assert res.status_code == 400
 
     def test_unknown_model_returns_400(self):
         """Model ID not in registry → 400."""
         mock_session = _make_session(user_api_keys=None)
         with patch("api.routes.chat.get_session", return_value=mock_session):
-            res = client.post("/chat/message", json={
-                "session_id": "test-session-id",
-                "message": "hello",
-                "model": "does-not-exist-model",
-            })
+            res = client.post(
+                "/chat/message",
+                json={
+                    "session_id": "test-session-id",
+                    "message": "hello",
+                    "model": "does-not-exist-model",
+                },
+            )
             assert res.status_code == 400
 
     def test_empty_context_sections_returns_409(self):
         """Session with no context sections → 409 (vault not loaded)."""
         mock_session = _make_session(user_api_keys=None)
-        mock_session.context_sections = {} # empty vault
+        mock_session.context_sections = {}  # empty vault
         with patch("api.routes.chat.get_session", return_value=mock_session):
-            res = client.post("/chat/message", json={
-                "session_id": "test-session-id",
-                "message": "hello",
-                "model": "gpt-4o",
-            })
+            res = client.post(
+                "/chat/message",
+                json={
+                    "session_id": "test-session-id",
+                    "message": "hello",
+                    "model": "gpt-4o",
+                },
+            )
             assert res.status_code == 409
 
     def test_missing_required_fields_returns_422(self):
@@ -234,12 +292,19 @@ class TestChatMessage:
 
 # ── build_system_prompt ────────────────────────────────────────────────────────
 
+
 class TestBuildSystemPrompt:
     def test_sections_injected_in_canonical_order(self):
         """Sections appear in soul → user → symbiote → session_state order."""
         from api.routes.chat import build_system_prompt
+
         prompt = build_system_prompt(
-            context_sections={"session_state": "state", "harness": "harness", "user": "user", "config": "cfg"},
+            context_sections={
+                "session_state": "state",
+                "harness": "harness",
+                "user": "user",
+                "config": "cfg",
+            },
             model_id="gpt-4o",
             token_id="0.0.1234",
         )
@@ -251,20 +316,24 @@ class TestBuildSystemPrompt:
 
     def test_token_id_in_footer(self):
         from api.routes.chat import build_system_prompt
+
         prompt = build_system_prompt({}, "gpt-4o", "0.0.5678")
         assert "0.0.5678" in prompt
 
     def test_empty_sections_no_section_labels(self):
         """Empty context sections → no section labels injected."""
         from api.routes.chat import build_system_prompt
+
         prompt = build_system_prompt({}, "gpt-4o", "0.0.1234")
         assert "=== HARNESS DIRECTIVES ===" not in prompt
 
     def test_unknown_sections_appended_at_end(self):
         """Unknown section names get added with their name uppercased."""
         from api.routes.chat import build_system_prompt
+
         prompt = build_system_prompt(
             {"harness": "soul text", "custom_section": "custom content"},
-            "gpt-4o", "0.0.1234",
+            "gpt-4o",
+            "0.0.1234",
         )
         assert "=== CUSTOM_SECTION ===" in prompt

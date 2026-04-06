@@ -48,9 +48,15 @@ from typing import Optional
 from src.context_storage import store_context, load_context, update_context
 from src.crypto import compress, decompress
 from src.vault import (
-    get_package_key, get_index_key,
-    _make_package_aad, _make_package_index_aad, _make_index_aad,
-    load_local_index, save_local_index, CONTEXT_TOKEN_ID, verify_content,
+    get_package_key,
+    get_index_key,
+    _make_package_aad,
+    _make_package_index_aad,
+    _make_index_aad,
+    load_local_index,
+    save_local_index,
+    CONTEXT_TOKEN_ID,
+    verify_content,
 )
 from src.event_log import log_event
 
@@ -62,6 +68,7 @@ VAULT_ROOT = Path(os.environ.get("MEMORY_VAULT_ROOT", str(Path.home() / "vault")
 _cats_override = os.environ.get("MEMORY_PACKAGE_CATEGORIES", "")
 if _cats_override:
     import json as _json
+
     PACKAGE_CATEGORIES: dict[str, Path] = {
         k: Path(v) for k, v in _json.loads(_cats_override).items()
     }
@@ -81,6 +88,7 @@ SKIP_EXTENSIONS = {".pdf"}
 # Package metadata model
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class PackageMetadata:
     name: str  # filename without extension
@@ -96,6 +104,7 @@ class PackageMetadata:
 # ---------------------------------------------------------------------------
 # Metadata helpers
 # ---------------------------------------------------------------------------
+
 
 def extract_date_from_name(name: str) -> str:
     """Extract YYYY-MM-DD from filename if present, else return today."""
@@ -160,6 +169,7 @@ def build_metadata(path: Path, category: str, file_id: str = "") -> PackageMetad
 # ---------------------------------------------------------------------------
 # Push / pull individual packages
 # ---------------------------------------------------------------------------
+
 
 def push_package(
     path: Path,
@@ -280,6 +290,7 @@ def pull_packages_parallel(
 # Package index push / pull
 # ---------------------------------------------------------------------------
 
+
 def push_package_index(
     packages: list[PackageMetadata],
     key: bytes,
@@ -347,6 +358,7 @@ def pull_package_index(index_file_id: str, key: bytes, token_id: str) -> list[Pa
 # Relevance-gated query
 # ---------------------------------------------------------------------------
 
+
 def query_packages(
     query: str,
     packages: list[PackageMetadata],
@@ -369,6 +381,7 @@ def query_packages(
     """
     if use_rag:
         from src.rag import rag_query_packages
+
         return rag_query_packages(query, packages, top_n, threshold)
 
     # Fallback: simple keyword overlap
@@ -382,12 +395,14 @@ def query_packages(
         pkg_tokens = set(
             re.findall(
                 r"\b[a-z][a-z0-9]{2,}\b",
-                " ".join([
-                    pkg.name,
-                    pkg.description,
-                    " ".join(pkg.keywords),
-                    pkg.category,
-                ]).lower(),
+                " ".join(
+                    [
+                        pkg.name,
+                        pkg.description,
+                        " ".join(pkg.keywords),
+                        pkg.category,
+                    ]
+                ).lower(),
             )
         )
 
@@ -407,6 +422,7 @@ def query_packages(
 # ---------------------------------------------------------------------------
 # High-level: push_all_packages
 # ---------------------------------------------------------------------------
+
 
 def push_all_packages(
     categories: Optional[list[str]] = None,
@@ -444,7 +460,8 @@ def push_all_packages(
             continue
 
         files = [
-            f for f in sorted(cat_dir.iterdir())
+            f
+            for f in sorted(cat_dir.iterdir())
             if f.is_file()
             and f.name not in SKIP_NAMES
             and f.suffix not in SKIP_EXTENSIONS

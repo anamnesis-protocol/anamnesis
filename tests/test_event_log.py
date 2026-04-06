@@ -20,11 +20,14 @@ class TestEventLogStructure:
         event_type = "CONTEXT_TOKEN_MINTED"
         payload = {"token_id": "0.0.67890", "serial": 1}
 
-        message = json.dumps({
-            "event_type": event_type,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "payload": payload,
-        }, separators=(",", ":"))
+        message = json.dumps(
+            {
+                "event_type": event_type,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "payload": payload,
+            },
+            separators=(",", ":"),
+        )
 
         parsed = json.loads(message)
         assert parsed["event_type"] == event_type
@@ -42,6 +45,7 @@ class TestEventLogStructure:
             # Import after env is patched
             try:
                 from src.event_log import log_event
+
                 result = log_event("TEST_EVENT", {"data": "value"})
                 assert result == ""
             except Exception:
@@ -51,7 +55,7 @@ class TestEventLogStructure:
 
 @pytest.mark.skipif(
     os.getenv("HEDERA_NETWORK", "mock") == "mock",
-    reason="Requires live Hedera testnet credentials in .env"
+    reason="Requires live Hedera testnet credentials in .env",
 )
 class TestEventLogNetwork:
     def test_create_topic(self):

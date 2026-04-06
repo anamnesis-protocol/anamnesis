@@ -24,7 +24,7 @@ def test_section_metadata_creation():
         last_reviewed="2026-04-01",
         status="active",
     )
-    
+
     assert metadata.status == "active"
     assert len(metadata.tags) == 2
     assert metadata.version == "1.0"
@@ -41,7 +41,7 @@ def test_metadata_is_stale():
         status="active",
     )
     assert not recent.is_stale(90)
-    
+
     # Old review - stale
     old = SectionMetadata(
         tags=["#status/active"],
@@ -62,10 +62,10 @@ def test_metadata_mark_reviewed():
         last_reviewed="2026-01-01",
         status="active",
     )
-    
+
     old_review = metadata.last_reviewed
     metadata.mark_reviewed()
-    
+
     assert metadata.last_reviewed != old_review
     assert metadata.last_reviewed == datetime.now().date().isoformat()
 
@@ -79,10 +79,10 @@ def test_metadata_mark_updated():
         last_reviewed="2026-01-01",
         status="active",
     )
-    
+
     metadata.mark_updated()
     today = datetime.now().date().isoformat()
-    
+
     assert metadata.last_updated == today
     assert metadata.last_reviewed == today
 
@@ -103,9 +103,9 @@ version: "1.0"
 
 This is the body.
 """
-    
+
     metadata, body = parse_frontmatter(content)
-    
+
     assert metadata is not None
     assert metadata.status == "active"
     assert len(metadata.tags) == 2
@@ -115,9 +115,9 @@ This is the body.
 def test_parse_frontmatter_no_frontmatter():
     """Test parsing content without frontmatter."""
     content = "# Just Content\n\nNo frontmatter here."
-    
+
     metadata, body = parse_frontmatter(content)
-    
+
     assert metadata is None
     assert body == content
 
@@ -132,9 +132,9 @@ def test_add_frontmatter():
         last_reviewed="2026-04-01",
         status="active",
     )
-    
+
     result = add_frontmatter(content, metadata)
-    
+
     assert result.startswith("---\n")
     assert "status: active" in result
     assert "# Section" in result
@@ -153,9 +153,9 @@ version: "1.0"
 ---
 # Content
 """
-    
+
     result = update_frontmatter(content, status="archived")
-    
+
     assert "status: archived" in result
     assert "# Content" in result
 
@@ -163,9 +163,9 @@ version: "1.0"
 def test_update_frontmatter_no_existing():
     """Test updating content without frontmatter creates it."""
     content = "# Content\n\nNo metadata."
-    
+
     result = update_frontmatter(content, status="active")
-    
+
     assert result.startswith("---\n")
     assert "status: active" in result
     assert "# Content" in result
@@ -174,7 +174,7 @@ def test_update_frontmatter_no_existing():
 def test_create_default_metadata():
     """Test creating default metadata."""
     metadata = create_default_metadata(tags=["#type/identity"])
-    
+
     assert metadata.status == "active"
     assert "#type/identity" in metadata.tags
     assert metadata.created == datetime.now().date().isoformat()
@@ -192,7 +192,9 @@ status: "active"
 version: "1.0"
 ---
 Fresh content
-""".format(datetime.now().date().isoformat()),
+""".format(
+            datetime.now().date().isoformat()
+        ),
         "stale": """---
 tags: ["#status/active"]
 created: "2025-01-01"
@@ -205,9 +207,9 @@ Stale content
 """,
         "no_metadata": "# No metadata\n\nJust content.",
     }
-    
+
     stale = get_stale_sections(sections, threshold_days=90)
-    
+
     # Should find 2 stale sections (stale + no_metadata)
     assert len(stale) >= 2
     stale_names = [name for name, _ in stale]
@@ -228,7 +230,9 @@ status: "active"
 version: "1.0"
 ---
 Content
-""".format(datetime.now().date().isoformat()),
+""".format(
+            datetime.now().date().isoformat()
+        ),
         "stale1": """---
 tags: ["#status/active"]
 created: "2025-01-01"
@@ -241,9 +245,9 @@ Content
 """,
         "no_meta": "# No metadata",
     }
-    
+
     report = generate_health_report(sections)
-    
+
     assert report["total_sections"] == 3
     assert report["with_metadata"] == 2
     assert len(report["missing_metadata"]) == 1
@@ -300,13 +304,15 @@ status: "active"
 version: "1.0"
 ---
 Content
-""".format(datetime.now().date().isoformat()),
+""".format(
+            datetime.now().date().isoformat()
+        ),
         "invalid_yaml": """---
 bad: yaml: structure
 ---
 Content""",
     }
-    
+
     stale = get_stale_sections(sections, threshold_days=90)
     # Should handle parse error and still return results
     assert isinstance(stale, list)
@@ -324,14 +330,16 @@ status: "active"
 version: "1.0"
 ---
 Content
-""".format(datetime.now().date().isoformat()),
+""".format(
+            datetime.now().date().isoformat()
+        ),
         "invalid_yaml": """---
 bad yaml
 ---
 Content""",
         "corrupted": "---\n" + "x" * 10000,  # Very long invalid content
     }
-    
+
     report = generate_health_report(sections)
     # Should handle errors and still generate report
     assert "total_sections" in report
@@ -360,7 +368,7 @@ version: "1.0"
 ---
 Content""",
     }
-    
+
     stale = get_stale_sections(sections, threshold_days=90)
     # Should handle invalid dates and mark as stale with 999 days
     assert len(stale) == 2
@@ -391,7 +399,7 @@ version: "1.0"
 ---
 Content""",
     }
-    
+
     report = generate_health_report(sections)
     # Should handle invalid dates gracefully
     assert "total_sections" in report

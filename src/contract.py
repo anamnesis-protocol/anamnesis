@@ -31,9 +31,10 @@ from hiero_sdk_python import (
     ContractCallQuery,
     ContractFunctionParameters,
     Hbar,
-    )
+)
 from hiero_sdk_python.contract.contract_id import ContractId
 from hiero_sdk_python.hapi.services import response_code_pb2 as _rc
+
 _SUCCESS = _rc.SUCCESS  # 22
 from src.config import get_client, get_treasury
 from src.event_log import log_event
@@ -74,7 +75,7 @@ def compile_contract() -> tuple[str, str]:
         source,
         output_values=["abi", "bin"],
         solc_version=SOLC_VERSION,
-        )
+    )
 
     # compiled keys look like: '<stdin>:ContextValidator'
     contract_key = next(k for k in compiled if "ContextValidator" in k)
@@ -107,7 +108,7 @@ def deploy_contract() -> str:
         .set_contract_memo("sovereign-ai-context validator v2")
         .freeze_with(client)
         .sign(treasury_key)
-        )
+    )
 
     receipt = tx.execute(client)
     if receipt.status != _SUCCESS:
@@ -120,7 +121,7 @@ def deploy_contract() -> str:
     log_event(
         event_type="CONTRACT_DEPLOYED",
         payload={"contract_id": contract_id},
-        )
+    )
 
     print(f"Contract deployed: {contract_id}")
     return contract_id
@@ -131,7 +132,7 @@ def register_file(
     token_evm_address: str,
     serial: int,
     file_id: str,
-    ) -> None:
+) -> None:
     """
     Call registerContextFile() on the deployed contract.
     Only the NFT owner can call this — treasury is the initial owner post-mint.
@@ -150,7 +151,7 @@ def register_file(
         .add_address(token_evm_address)
         .add_uint64(serial)
         .add_string(file_id)
-        )
+    )
 
     receipt = (
         ContractExecuteTransaction()
@@ -160,7 +161,7 @@ def register_file(
         .freeze_with(client)
         .sign(treasury_key)
         .execute(client)
-        )
+    )
 
     if receipt.status != _SUCCESS:
         raise RuntimeError(
@@ -172,12 +173,12 @@ def register_file(
     log_event(
         event_type="FILE_REGISTERED",
         payload={
-        "contract_id": contract_id,
-        "token_evm_address": token_evm_address,
-        "serial": serial,
-        "file_id": file_id,
+            "contract_id": contract_id,
+            "token_evm_address": token_evm_address,
+            "serial": serial,
+            "file_id": file_id,
         },
-        )
+    )
 
     print(f"File {file_id} registered for token {token_evm_address} serial {serial}")
 
@@ -186,7 +187,7 @@ def validate_and_get_file_id(
     contract_id: str,
     token_evm_address: str,
     serial: int,
-    ) -> str:
+) -> str:
     """
     Call validateAndGetFileId() — proves ownership and returns the HFS file ID.
 
@@ -210,8 +211,8 @@ def validate_and_get_file_id(
         ContractFunctionParameters()
         .add_address(token_evm_address)
         .add_uint64(serial)
-        .add_bytes(b"") # signature placeholder (PoC — msg.sender check is sufficient)
-        )
+        .add_bytes(b"")  # signature placeholder (PoC — msg.sender check is sufficient)
+    )
 
     receipt = (
         ContractExecuteTransaction()
@@ -221,16 +222,16 @@ def validate_and_get_file_id(
         .freeze_with(client)
         .sign(treasury_key)
         .execute(client)
-        )
+    )
 
     log_event(
         event_type="CONTEXT_VALIDATED",
         payload={
-        "contract_id": contract_id,
-        "token_evm_address": token_evm_address,
-        "serial": serial,
+            "contract_id": contract_id,
+            "token_evm_address": token_evm_address,
+            "serial": serial,
         },
-        )
+    )
 
     # The file_id is returned from the contract — read via ContractCallQuery for the return value
     return get_registered_file_id(contract_id, token_evm_address, serial)
@@ -240,7 +241,7 @@ def get_registered_file_id(
     contract_id: str,
     token_evm_address: str,
     serial: int,
-    ) -> str:
+) -> str:
     """
     Read-only view: get the registered file ID without emitting an event.
     Uses ContractCallQuery (no gas cost, no state change).
@@ -255,11 +256,7 @@ def get_registered_file_id(
     """
     client = get_client()
 
-    params = (
-        ContractFunctionParameters()
-        .add_address(token_evm_address)
-        .add_uint64(serial)
-        )
+    params = ContractFunctionParameters().add_address(token_evm_address).add_uint64(serial)
 
     result = (
         ContractCallQuery()
@@ -267,6 +264,6 @@ def get_registered_file_id(
         .set_gas(100_000)
         .set_function("getRegisteredFileId", params)
         .execute(client)
-        )
+    )
 
     return result.get_string(0)

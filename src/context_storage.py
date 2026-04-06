@@ -26,12 +26,12 @@ Usage:
 import re
 
 from hiero_sdk_python import (
- FileCreateTransaction,
- FileAppendTransaction,
- FileUpdateTransaction,
- FileContentsQuery,
- FileInfoQuery,
- Hbar,
+    FileCreateTransaction,
+    FileAppendTransaction,
+    FileUpdateTransaction,
+    FileContentsQuery,
+    FileInfoQuery,
+    Hbar,
 )
 from hiero_sdk_python.file.file_id import FileId
 from src.config import get_client, get_treasury
@@ -54,7 +54,9 @@ def _validate_file_id(file_id: str) -> None:
         )
 
 
-def store_context(key: bytes, plaintext: bytes, token_id: str = "", aad: bytes | None = None) -> str:
+def store_context(
+    key: bytes, plaintext: bytes, token_id: str = "", aad: bytes | None = None
+) -> str:
     """
     Encrypt context and store it on Hedera File Service.
 
@@ -98,7 +100,7 @@ def store_context(key: bytes, plaintext: bytes, token_id: str = "", aad: bytes |
     # Append remaining chunks
     offset = 0
     while offset < len(remaining):
-        chunk = remaining[offset: offset + _CHUNK_SIZE]
+        chunk = remaining[offset : offset + _CHUNK_SIZE]
         (
             FileAppendTransaction()
             .set_file_id(file_id)
@@ -146,11 +148,7 @@ def load_context(key: bytes, file_id: str, token_id: str = "", aad: bytes | None
     _validate_file_id(file_id)
     client = get_client()
 
-    ciphertext = (
-        FileContentsQuery()
-        .set_file_id(FileId.from_string(file_id))
-        .execute(client)
-    )
+    ciphertext = FileContentsQuery().set_file_id(FileId.from_string(file_id)).execute(client)
 
     plaintext = decrypt_context(key, bytes(ciphertext), aad)
 
@@ -166,7 +164,9 @@ def load_context(key: bytes, file_id: str, token_id: str = "", aad: bytes | None
     return plaintext
 
 
-def update_context(key: bytes, file_id: str, new_plaintext: bytes, token_id: str = "", aad: bytes | None = None) -> None:
+def update_context(
+    key: bytes, file_id: str, new_plaintext: bytes, token_id: str = "", aad: bytes | None = None
+) -> None:
     """
     Replace the encrypted context for an existing HFS file.
 
@@ -204,7 +204,7 @@ def update_context(key: bytes, file_id: str, new_plaintext: bytes, token_id: str
     # Append remaining chunks (same pattern as store_context)
     offset = 0
     while offset < len(remaining):
-        chunk = remaining[offset: offset + _CHUNK_SIZE]
+        chunk = remaining[offset : offset + _CHUNK_SIZE]
         (
             FileAppendTransaction()
             .set_file_id(FileId.from_string(file_id))
@@ -229,11 +229,7 @@ def get_file_info(file_id: str) -> dict:
     """Fetch HFS file metadata (size, keys, expiration) without reading content."""
     client = get_client()
 
-    info = (
-        FileInfoQuery()
-        .set_file_id(FileId.from_string(file_id))
-        .execute(client)
-    )
+    info = FileInfoQuery().set_file_id(FileId.from_string(file_id)).execute(client)
 
     return {
         "file_id": file_id,

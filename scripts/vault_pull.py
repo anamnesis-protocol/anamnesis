@@ -25,6 +25,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from src.vault import (
@@ -40,11 +41,11 @@ from src.vault import (
     get_vault_key,
     get_section_key,
     load_local_index,
-    )
+)
 from src.contract import (
     token_id_to_evm_address,
     get_registered_file_id,
-    )
+)
 from src.config import get_validator_contract_id
 
 
@@ -65,7 +66,6 @@ def verify_contract_registration() -> str:
         sys.exit(1)
 
         return file_id
-
 
     def pull_one_section(section_name: str, out_dir: Path | None) -> None:
         """Pull and optionally write a single vault section."""
@@ -110,7 +110,6 @@ def verify_contract_registration() -> str:
                             if len(content) > 500:
                                 print(f"... [{len(content) - 500} more bytes]")
 
-
         def _pull_dir_sections(restore_root: Path) -> None:
             """
             Fetch and restore all directory bundles (Research, Projects, System) from HFS.
@@ -135,7 +134,7 @@ def verify_contract_registration() -> str:
 
                 for dir_name, file_id in dir_ids.items():
                     # dir_name is "dir:research" — strip prefix for output dir
-                    subdir_key = dir_name.split(":", 1)[-1] # "research"
+                    subdir_key = dir_name.split(":", 1)[-1]  # "research"
                     # Map back to original vault dir name
                     rel_dir = VAULT_DIRS.get(dir_name, subdir_key)
                     output_dir = restore_root / rel_dir
@@ -154,7 +153,6 @@ def verify_contract_registration() -> str:
                             print(" Directory bundles restored successfully.")
                             print("=" * 60)
 
-
             def main():
                 # Reconfigure stdout to handle Unicode on Windows (cp1252 -> utf-8)
                 if hasattr(sys.stdout, "reconfigure"):
@@ -170,35 +168,35 @@ def verify_contract_registration() -> str:
                     python scripts/vault_pull.py --section soul # preview soul section
                     python scripts/vault_pull.py --section soul --out . # write soul.md to current dir
                     """,
-                        )
+                    )
                     parser.add_argument(
                         "--section",
                         type=str,
                         default=None,
                         help=f"Pull a single section. One of: {list(VAULT_SECTIONS.keys())}",
-                        )
+                    )
                     parser.add_argument(
                         "--out",
                         type=str,
                         default=None,
                         help="Output directory for decrypted files (creates if not exists)",
-                        )
+                    )
                     parser.add_argument(
                         "--verify-contract",
                         action="store_true",
                         help="Check contract registration before pulling (default: use local cache)",
-                        )
+                    )
                     parser.add_argument(
                         "--dirs",
                         action="store_true",
                         help="Also pull and restore directory bundles (Research, Projects, System) to vault",
-                        )
+                    )
                     parser.add_argument(
                         "--dirs-out",
                         type=str,
                         default=None,
                         help="Output root for directory restore (defaults to VAULT_ROOT). Only used with --dirs.",
-                        )
+                    )
 
                     args = parser.parse_args()
                     out_dir = Path(args.out) if args.out else None
@@ -232,9 +230,10 @@ def verify_contract_registration() -> str:
 
                                     # Directory bundle restore (opt-in)
                                     if args.dirs:
-                                        restore_root = Path(args.dirs_out) if args.dirs_out else VAULT_ROOT
+                                        restore_root = (
+                                            Path(args.dirs_out) if args.dirs_out else VAULT_ROOT
+                                        )
                                         _pull_dir_sections(restore_root)
-
 
                                         if __name__ == "__main__":
                                             main()

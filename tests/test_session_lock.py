@@ -25,7 +25,6 @@ from api.session_store import (
     Session,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -74,6 +73,7 @@ def clean_store():
 # acquire_lock
 # ---------------------------------------------------------------------------
 
+
 class TestAcquireLock:
     def test_first_acquire_succeeds(self):
         assert acquire_lock(TOKEN_A, SESSION_A) is True
@@ -113,6 +113,7 @@ class TestAcquireLock:
 # release_lock
 # ---------------------------------------------------------------------------
 
+
 class TestReleaseLock:
     def test_release_by_holder_clears_lock(self):
         store._locks[TOKEN_A] = SESSION_A
@@ -132,6 +133,7 @@ class TestReleaseLock:
 # get_lock_holder
 # ---------------------------------------------------------------------------
 
+
 class TestGetLockHolder:
     def test_returns_session_id_when_locked(self):
         store._locks[TOKEN_A] = SESSION_A
@@ -144,6 +146,7 @@ class TestGetLockHolder:
 # ---------------------------------------------------------------------------
 # create_session acquires lock; close_session releases it
 # ---------------------------------------------------------------------------
+
 
 class TestSessionLifecycleLocking:
     def test_create_session_acquires_lock(self):
@@ -225,6 +228,7 @@ class TestSessionLifecycleLocking:
 # HTTP-level: concurrent open returns 409
 # ---------------------------------------------------------------------------
 
+
 class TestConcurrentSessionHttp:
     def test_second_open_returns_409(self):
         """
@@ -232,6 +236,7 @@ class TestConcurrentSessionHttp:
         token_id must return 409 Conflict.
         """
         from api.main import app
+
         client = TestClient(app)
 
         TOKEN = "0.0.77777"

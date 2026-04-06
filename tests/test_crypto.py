@@ -7,11 +7,17 @@ They validate the core cryptographic claims of the patent.
 
 import pytest
 from cryptography.exceptions import InvalidTag
-from src.crypto import derive_key, encrypt_context, decrypt_context, make_challenge, compress, decompress
-
+from src.crypto import (
+    derive_key,
+    encrypt_context,
+    decrypt_context,
+    make_challenge,
+    compress,
+    decompress,
+)
 
 TOKEN_ID = "0.0.67890"
-WALLET_SIG = b"\xde\xad\xbe\xef" * 16 # 64 bytes of fake wallet sig
+WALLET_SIG = b"\xde\xad\xbe\xef" * 16  # 64 bytes of fake wallet sig
 
 
 class TestDeriveKey:
@@ -67,12 +73,12 @@ class TestEncryptDecrypt:
 
     def test_tampered_ciphertext_raises(self):
         ciphertext = bytearray(encrypt_context(self.key, self.plaintext))
-        ciphertext[-1] ^= 0xFF # flip last byte
+        ciphertext[-1] ^= 0xFF  # flip last byte
         with pytest.raises(InvalidTag):
             decrypt_context(self.key, bytes(ciphertext))
 
     def test_large_context(self):
-        large_plaintext = b"x" * 100_000 # 100 KB
+        large_plaintext = b"x" * 100_000  # 100 KB
         ciphertext = encrypt_context(self.key, large_plaintext)
         result = decrypt_context(self.key, ciphertext)
         assert result == large_plaintext

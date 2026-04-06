@@ -36,11 +36,10 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-
 # Domain separator — update version string if algorithm changes
 _HKDF_INFO = b"sovereign-ai-context-v1"
-_NONCE_LEN = 12 # 96-bit GCM nonce
-_TAG_LEN = 16 # 128-bit GCM auth tag (cryptography default)
+_NONCE_LEN = 12  # 96-bit GCM nonce
+_TAG_LEN = 16  # 128-bit GCM auth tag (cryptography default)
 
 # Compression magic: gzip header bytes — used to detect compressed plaintext on pull
 _GZIP_MAGIC = b"\x1f\x8b"
@@ -80,7 +79,7 @@ def decompress(data: bytes) -> bytes:
     """
     if data[:2] == _GZIP_MAGIC:
         return gzip.decompress(data)
-    return data # Not compressed — pass through (backward compat)
+    return data  # Not compressed — pass through (backward compat)
 
 
 def derive_key(token_id: str, wallet_signature: bytes, info: bytes | None = None) -> bytes:

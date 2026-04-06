@@ -69,6 +69,7 @@ def _make_package(**kwargs) -> SkillPackage:
 # GET /skills
 # ---------------------------------------------------------------------------
 
+
 class TestListSkills:
     def test_missing_session_returns_404(self):
         with patch("api.routes.skills.get_session", return_value=None):
@@ -76,8 +77,10 @@ class TestListSkills:
         assert resp.status_code == 404
 
     def test_empty_vault_returns_empty_list(self):
-        with patch("api.routes.skills.get_session", return_value=_mock_session()), \
-             patch("api.routes.skills.query_skills", return_value=[]):
+        with (
+            patch("api.routes.skills.get_session", return_value=_mock_session()),
+            patch("api.routes.skills.query_skills", return_value=[]),
+        ):
             resp = client.get("/skills", params={"session_id": SESSION_ID})
         assert resp.status_code == 200
         data = resp.json()
@@ -86,30 +89,38 @@ class TestListSkills:
 
     def test_returns_skills_list(self):
         metas = [_make_meta(), _make_meta(id="skill-002", name="another_skill")]
-        with patch("api.routes.skills.get_session", return_value=_mock_session()), \
-             patch("api.routes.skills.query_skills", return_value=metas):
+        with (
+            patch("api.routes.skills.get_session", return_value=_mock_session()),
+            patch("api.routes.skills.query_skills", return_value=metas),
+        ):
             resp = client.get("/skills", params={"session_id": SESSION_ID})
         assert resp.status_code == 200
         assert len(resp.json()["skills"]) == 2
 
     def test_tag_filter_forwarded(self):
-        with patch("api.routes.skills.get_session", return_value=_mock_session()) as _, \
-             patch("api.routes.skills.query_skills", return_value=[]) as mock_query:
+        with (
+            patch("api.routes.skills.get_session", return_value=_mock_session()) as _,
+            patch("api.routes.skills.query_skills", return_value=[]) as mock_query,
+        ):
             client.get("/skills", params={"session_id": SESSION_ID, "tags": "security,audit"})
         mock_query.assert_called_once()
         call_kwargs = mock_query.call_args[1]
         assert call_kwargs["tags"] == ["security", "audit"]
 
     def test_name_contains_filter_forwarded(self):
-        with patch("api.routes.skills.get_session", return_value=_mock_session()), \
-             patch("api.routes.skills.query_skills", return_value=[]) as mock_query:
+        with (
+            patch("api.routes.skills.get_session", return_value=_mock_session()),
+            patch("api.routes.skills.query_skills", return_value=[]) as mock_query,
+        ):
             client.get("/skills", params={"session_id": SESSION_ID, "name_contains": "contract"})
         call_kwargs = mock_query.call_args[1]
         assert call_kwargs["name_contains"] == "contract"
 
     def test_skill_summary_shape(self):
-        with patch("api.routes.skills.get_session", return_value=_mock_session()), \
-             patch("api.routes.skills.query_skills", return_value=[_make_meta()]):
+        with (
+            patch("api.routes.skills.get_session", return_value=_mock_session()),
+            patch("api.routes.skills.query_skills", return_value=[_make_meta()]),
+        ):
             resp = client.get("/skills", params={"session_id": SESSION_ID})
         skill = resp.json()["skills"][0]
         for key in ("id", "name", "description", "tags", "version", "created_at"):
@@ -120,6 +131,7 @@ class TestListSkills:
 # GET /skills/tools
 # ---------------------------------------------------------------------------
 
+
 class TestListSkillTools:
     def test_missing_session_returns_404(self):
         with patch("api.routes.skills.get_session", return_value=None):
@@ -128,9 +140,11 @@ class TestListSkillTools:
 
     def test_returns_mcp_tool_definitions(self):
         package = _make_package()
-        with patch("api.routes.skills.get_session", return_value=_mock_session()), \
-             patch("api.routes.skills.query_skills", return_value=[_make_meta()]), \
-             patch("api.routes.skills.pull_skill", return_value=package):
+        with (
+            patch("api.routes.skills.get_session", return_value=_mock_session()),
+            patch("api.routes.skills.query_skills", return_value=[_make_meta()]),
+            patch("api.routes.skills.pull_skill", return_value=package),
+        ):
             resp = client.get("/skills/tools", params={"session_id": SESSION_ID})
         assert resp.status_code == 200
         tools = resp.json()["tools"]
@@ -141,9 +155,11 @@ class TestListSkillTools:
 
     def test_failed_pull_skipped_not_500(self):
         """If a skill fails to load from HFS, skip it rather than 500."""
-        with patch("api.routes.skills.get_session", return_value=_mock_session()), \
-             patch("api.routes.skills.query_skills", return_value=[_make_meta()]), \
-             patch("api.routes.skills.pull_skill", side_effect=RuntimeError("HFS down")):
+        with (
+            patch("api.routes.skills.get_session", return_value=_mock_session()),
+            patch("api.routes.skills.query_skills", return_value=[_make_meta()]),
+            patch("api.routes.skills.pull_skill", side_effect=RuntimeError("HFS down")),
+        ):
             resp = client.get("/skills/tools", params={"session_id": SESSION_ID})
         assert resp.status_code == 200
         assert resp.json()["tools"] == []
@@ -153,6 +169,7 @@ class TestListSkillTools:
 # GET /skills/{skill_id}
 # ---------------------------------------------------------------------------
 
+
 class TestGetSkill:
     def test_missing_session_returns_404(self):
         with patch("api.routes.skills.get_session", return_value=None):
@@ -160,16 +177,20 @@ class TestGetSkill:
         assert resp.status_code == 404
 
     def test_skill_not_in_index_returns_404(self):
-        with patch("api.routes.skills.get_session", return_value=_mock_session()), \
-             patch("api.routes.skills.query_skills", return_value=[]):
+        with (
+            patch("api.routes.skills.get_session", return_value=_mock_session()),
+            patch("api.routes.skills.query_skills", return_value=[]),
+        ):
             resp = client.get("/skills/skill-001", params={"session_id": SESSION_ID})
         assert resp.status_code == 404
 
     def test_returns_full_skill_detail(self):
         package = _make_package()
-        with patch("api.routes.skills.get_session", return_value=_mock_session()), \
-             patch("api.routes.skills.query_skills", return_value=[_make_meta()]), \
-             patch("api.routes.skills.pull_skill", return_value=package):
+        with (
+            patch("api.routes.skills.get_session", return_value=_mock_session()),
+            patch("api.routes.skills.query_skills", return_value=[_make_meta()]),
+            patch("api.routes.skills.pull_skill", return_value=package),
+        ):
             resp = client.get("/skills/skill-001", params={"session_id": SESSION_ID})
         assert resp.status_code == 200
         data = resp.json()
@@ -179,9 +200,11 @@ class TestGetSkill:
         assert "examples" in data
 
     def test_hfs_failure_returns_502(self):
-        with patch("api.routes.skills.get_session", return_value=_mock_session()), \
-             patch("api.routes.skills.query_skills", return_value=[_make_meta()]), \
-             patch("api.routes.skills.pull_skill", side_effect=RuntimeError("network error")):
+        with (
+            patch("api.routes.skills.get_session", return_value=_mock_session()),
+            patch("api.routes.skills.query_skills", return_value=[_make_meta()]),
+            patch("api.routes.skills.pull_skill", side_effect=RuntimeError("network error")),
+        ):
             resp = client.get("/skills/skill-001", params={"session_id": SESSION_ID})
         assert resp.status_code == 502
 
@@ -189,6 +212,7 @@ class TestGetSkill:
 # ---------------------------------------------------------------------------
 # POST /skills
 # ---------------------------------------------------------------------------
+
 
 class TestUpsertSkill:
     def test_missing_session_returns_404(self):
@@ -202,8 +226,10 @@ class TestUpsertSkill:
 
     def test_create_new_skill_returns_200(self):
         package = _make_package()
-        with patch("api.routes.skills.get_session", return_value=_mock_session()), \
-             patch("api.routes.skills.save_skill", return_value=package):
+        with (
+            patch("api.routes.skills.get_session", return_value=_mock_session()),
+            patch("api.routes.skills.save_skill", return_value=package),
+        ):
             resp = client.post(
                 "/skills",
                 params={"session_id": SESSION_ID},
@@ -220,8 +246,10 @@ class TestUpsertSkill:
 
     def test_update_existing_skill_message_says_updated(self):
         package = _make_package()
-        with patch("api.routes.skills.get_session", return_value=_mock_session()), \
-             patch("api.routes.skills.save_skill", return_value=package):
+        with (
+            patch("api.routes.skills.get_session", return_value=_mock_session()),
+            patch("api.routes.skills.save_skill", return_value=package),
+        ):
             resp = client.post(
                 "/skills",
                 params={"session_id": SESSION_ID},
@@ -236,8 +264,10 @@ class TestUpsertSkill:
         assert "updated" in resp.json()["message"]
 
     def test_save_failure_returns_502(self):
-        with patch("api.routes.skills.get_session", return_value=_mock_session()), \
-             patch("api.routes.skills.save_skill", side_effect=RuntimeError("HFS write failed")):
+        with (
+            patch("api.routes.skills.get_session", return_value=_mock_session()),
+            patch("api.routes.skills.save_skill", side_effect=RuntimeError("HFS write failed")),
+        ):
             resp = client.post(
                 "/skills",
                 params={"session_id": SESSION_ID},
@@ -247,8 +277,10 @@ class TestUpsertSkill:
 
     def test_save_skill_called_with_correct_token_id(self):
         package = _make_package()
-        with patch("api.routes.skills.get_session", return_value=_mock_session()), \
-             patch("api.routes.skills.save_skill", return_value=package) as mock_save:
+        with (
+            patch("api.routes.skills.get_session", return_value=_mock_session()),
+            patch("api.routes.skills.save_skill", return_value=package) as mock_save,
+        ):
             client.post(
                 "/skills",
                 params={"session_id": SESSION_ID},
@@ -261,6 +293,7 @@ class TestUpsertSkill:
 # DELETE /skills/{skill_id}
 # ---------------------------------------------------------------------------
 
+
 class TestDeleteSkillEndpoint:
     def test_missing_session_returns_404(self):
         with patch("api.routes.skills.get_session", return_value=None):
@@ -268,8 +301,10 @@ class TestDeleteSkillEndpoint:
         assert resp.status_code == 404
 
     def test_delete_existing_returns_deleted_true(self):
-        with patch("api.routes.skills.get_session", return_value=_mock_session()), \
-             patch("api.routes.skills.delete_skill", return_value=True):
+        with (
+            patch("api.routes.skills.get_session", return_value=_mock_session()),
+            patch("api.routes.skills.delete_skill", return_value=True),
+        ):
             resp = client.delete("/skills/skill-001", params={"session_id": SESSION_ID})
         assert resp.status_code == 200
         data = resp.json()
@@ -277,14 +312,18 @@ class TestDeleteSkillEndpoint:
         assert data["skill_id"] == "skill-001"
 
     def test_delete_nonexistent_returns_deleted_false(self):
-        with patch("api.routes.skills.get_session", return_value=_mock_session()), \
-             patch("api.routes.skills.delete_skill", return_value=False):
+        with (
+            patch("api.routes.skills.get_session", return_value=_mock_session()),
+            patch("api.routes.skills.delete_skill", return_value=False),
+        ):
             resp = client.delete("/skills/ghost-id", params={"session_id": SESSION_ID})
         assert resp.status_code == 200
         assert resp.json()["deleted"] is False
 
     def test_index_failure_returns_502(self):
-        with patch("api.routes.skills.get_session", return_value=_mock_session()), \
-             patch("api.routes.skills.delete_skill", side_effect=RuntimeError("index corrupt")):
+        with (
+            patch("api.routes.skills.get_session", return_value=_mock_session()),
+            patch("api.routes.skills.delete_skill", side_effect=RuntimeError("index corrupt")),
+        ):
             resp = client.delete("/skills/skill-001", params={"session_id": SESSION_ID})
         assert resp.status_code == 502

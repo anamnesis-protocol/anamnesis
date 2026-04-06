@@ -35,7 +35,7 @@ client = TestClient(app)
 # ---------------------------------------------------------------------------
 
 TOKEN_ID = "0.0.77777"
-WALLET_SIG = b"\xde\xad\xbe\xef" * 16 # 64-byte fake sig
+WALLET_SIG = b"\xde\xad\xbe\xef" * 16  # 64-byte fake sig
 _INFO_SECTION = b"sovereign-ai-section-v1"
 _INFO_INDEX = b"sovereign-ai-index-v1"
 
@@ -46,6 +46,7 @@ _INDEX_KEY = derive_key(TOKEN_ID, WALLET_SIG, info=_INFO_INDEX)
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_session(session_id: str, extra_section_ids: dict | None = None) -> Session:
     """Insert a live session directly into the store (bypasses open flow)."""
@@ -67,16 +68,14 @@ def _make_session(session_id: str, extra_section_ids: dict | None = None) -> Ses
             context_sections={"harness": "# SOUL", "user": "# USER"},
             created_at=now,
             expires_at=now + timedelta(hours=4),
-            )
+        )
         _store[session_id] = session
         return session
-
 
     def _bundle_aad(bundle_name: str, token_id: str) -> bytes:
         """Mirror of vault.py _bundle_aad — must match exactly."""
         full = f"dir:{bundle_name}"
         return f"dir:{full}:{token_id}".encode("utf-8")
-
 
         # ---------------------------------------------------------------------------
         # POST /vault/bundle — push new bundle
@@ -95,17 +94,22 @@ def _make_session(session_id: str, extra_section_ids: dict | None = None) -> Ses
                     def test_push_new_bundle_success(self):
                         new_file_id = "0.0.5001"
                         with (
-                            patch("api.routes.vault.store_context", return_value=new_file_id) as mock_store,
+                            patch(
+                                "api.routes.vault.store_context", return_value=new_file_id
+                            ) as mock_store,
                             patch("api.routes.vault.log_event"),
-                            ):
-                            resp = client.post("/vault/bundle", json={
-                                "session_id": self.SID,
-                                "bundle_name": "sessions",
-                                "files": {
-                                "2026-03-17-session.md": "# Session\nWorked on vault bundles.",
-                                "2026-03-18-session.md": "# Session\nFixed chunking bug.",
+                        ):
+                            resp = client.post(
+                                "/vault/bundle",
+                                json={
+                                    "session_id": self.SID,
+                                    "bundle_name": "sessions",
+                                    "files": {
+                                        "2026-03-17-session.md": "# Session\nWorked on vault bundles.",
+                                        "2026-03-18-session.md": "# Session\nFixed chunking bug.",
+                                    },
                                 },
-                                })
+                            )
 
                             assert resp.status_code == 200, resp.text
                             body = resp.json()
@@ -120,12 +124,15 @@ def _make_session(session_id: str, extra_section_ids: dict | None = None) -> Ses
                             with (
                                 patch("api.routes.vault.store_context", return_value=new_file_id),
                                 patch("api.routes.vault.log_event"),
-                                ):
-                                resp = client.post("/vault/bundle", json={
-                                    "session_id": self.SID,
-                                    "bundle_name": "projects",
-                                    "files": {"project-alpha.md": "# Alpha\nDetails."},
-                                    })
+                            ):
+                                resp = client.post(
+                                    "/vault/bundle",
+                                    json={
+                                        "session_id": self.SID,
+                                        "bundle_name": "projects",
+                                        "files": {"project-alpha.md": "# Alpha\nDetails."},
+                                    },
+                                )
 
                                 assert resp.status_code == 200
                                 session = _store[self.SID]
@@ -141,12 +148,17 @@ def _make_session(session_id: str, extra_section_ids: dict | None = None) -> Ses
                                     patch("api.routes.vault.update_context") as mock_update,
                                     patch("api.routes.vault.store_context") as mock_store,
                                     patch("api.routes.vault.log_event"),
-                                    ):
-                                    resp = client.post("/vault/bundle", json={
-                                        "session_id": self.SID,
-                                        "bundle_name": "research",
-                                        "files": {"ibm-prior-art.md": "# IBM\nSearched 14 terms."},
-                                        })
+                                ):
+                                    resp = client.post(
+                                        "/vault/bundle",
+                                        json={
+                                            "session_id": self.SID,
+                                            "bundle_name": "research",
+                                            "files": {
+                                                "ibm-prior-art.md": "# IBM\nSearched 14 terms."
+                                            },
+                                        },
+                                    )
 
                                     assert resp.status_code == 200
                                     mock_update.assert_called_once()
@@ -155,59 +167,86 @@ def _make_session(session_id: str, extra_section_ids: dict | None = None) -> Ses
                                     assert body["file_id"] == existing_fid
 
                                 def test_push_invalid_bundle_name_spaces(self):
-                                    resp = client.post("/vault/bundle", json={
-                                        "session_id": self.SID,
-                                        "bundle_name": "my sessions", # spaces not allowed
-                                        "files": {"a.md": "content"},
-                                        })
+                                    resp = client.post(
+                                        "/vault/bundle",
+                                        json={
+                                            "session_id": self.SID,
+                                            "bundle_name": "my sessions",  # spaces not allowed
+                                            "files": {"a.md": "content"},
+                                        },
+                                    )
                                     assert resp.status_code == 422
 
                                     def test_push_invalid_bundle_name_uppercase(self):
-                                        resp = client.post("/vault/bundle", json={
-                                            "session_id": self.SID,
-                                            "bundle_name": "MyBundle", # uppercase not allowed
-                                            "files": {"a.md": "content"},
-                                            })
+                                        resp = client.post(
+                                            "/vault/bundle",
+                                            json={
+                                                "session_id": self.SID,
+                                                "bundle_name": "MyBundle",  # uppercase not allowed
+                                                "files": {"a.md": "content"},
+                                            },
+                                        )
                                         assert resp.status_code == 422
 
                                         def test_push_invalid_bundle_name_starts_with_hyphen(self):
-                                            resp = client.post("/vault/bundle", json={
-                                                "session_id": self.SID,
-                                                "bundle_name": "-sessions",
-                                                "files": {"a.md": "content"},
-                                                })
+                                            resp = client.post(
+                                                "/vault/bundle",
+                                                json={
+                                                    "session_id": self.SID,
+                                                    "bundle_name": "-sessions",
+                                                    "files": {"a.md": "content"},
+                                                },
+                                            )
                                             assert resp.status_code == 422
 
                                             def test_push_nonexistent_session(self):
-                                                resp = client.post("/vault/bundle", json={
-                                                    "session_id": "nonexistent-session-id",
-                                                    "bundle_name": "sessions",
-                                                    "files": {"a.md": "content"},
-                                                    })
+                                                resp = client.post(
+                                                    "/vault/bundle",
+                                                    json={
+                                                        "session_id": "nonexistent-session-id",
+                                                        "bundle_name": "sessions",
+                                                        "files": {"a.md": "content"},
+                                                    },
+                                                )
                                                 assert resp.status_code == 404
 
                                                 def test_push_empty_files(self):
-                                                    resp = client.post("/vault/bundle", json={
-                                                        "session_id": self.SID,
-                                                        "bundle_name": "sessions",
-                                                        "files": {},
-                                                        })
+                                                    resp = client.post(
+                                                        "/vault/bundle",
+                                                        json={
+                                                            "session_id": self.SID,
+                                                            "bundle_name": "sessions",
+                                                            "files": {},
+                                                        },
+                                                    )
                                                     assert resp.status_code == 422
 
                                                     def test_push_hcs_failure_is_nonfatal(self):
                                                         """Bundle should succeed even if HCS log_event raises."""
                                                         with (
-                                                            patch("api.routes.vault.store_context", return_value="0.0.5099"),
-                                                            patch("api.routes.vault.log_event", side_effect=RuntimeError("HCS down")),
-                                                            ):
-                                                            resp = client.post("/vault/bundle", json={
-                                                                "session_id": self.SID,
-                                                                "bundle_name": "notes",
-                                                                "files": {"note.md": "content"},
-                                                                })
+                                                            patch(
+                                                                "api.routes.vault.store_context",
+                                                                return_value="0.0.5099",
+                                                            ),
+                                                            patch(
+                                                                "api.routes.vault.log_event",
+                                                                side_effect=RuntimeError(
+                                                                    "HCS down"
+                                                                ),
+                                                            ),
+                                                        ):
+                                                            resp = client.post(
+                                                                "/vault/bundle",
+                                                                json={
+                                                                    "session_id": self.SID,
+                                                                    "bundle_name": "notes",
+                                                                    "files": {"note.md": "content"},
+                                                                },
+                                                            )
                                                             assert resp.status_code == 200
-                                                            assert resp.json()["hcs_logged"] is False
-
+                                                            assert (
+                                                                resp.json()["hcs_logged"] is False
+                                                            )
 
                                                             # ---------------------------------------------------------------------------
                                                             # GET /vault/bundles — list bundle names
@@ -218,39 +257,85 @@ def _make_session(session_id: str, extra_section_ids: dict | None = None) -> Ses
 
                                                             def setup_method(self):
                                                                 _store.clear()
-                                                                _make_session(self.SID, extra_section_ids={
-                                                                    "dir:sessions": "0.0.6001",
-                                                                    "dir:projects": "0.0.6002",
-                                                                    })
+                                                                _make_session(
+                                                                    self.SID,
+                                                                    extra_section_ids={
+                                                                        "dir:sessions": "0.0.6001",
+                                                                        "dir:projects": "0.0.6002",
+                                                                    },
+                                                                )
 
                                                                 def teardown_method(self):
                                                                     _store.clear()
 
-                                                                    def test_list_bundles_returns_names(self):
-                                                                        resp = client.get(f"/vault/bundles?session_id={self.SID}")
-                                                                        assert resp.status_code == 200
+                                                                    def test_list_bundles_returns_names(
+                                                                        self,
+                                                                    ):
+                                                                        resp = client.get(
+                                                                            f"/vault/bundles?session_id={self.SID}"
+                                                                        )
+                                                                        assert (
+                                                                            resp.status_code == 200
+                                                                        )
                                                                         body = resp.json()
-                                                                        assert set(body["bundles"]) == {"sessions", "projects"}
+                                                                        assert set(
+                                                                            body["bundles"]
+                                                                        ) == {
+                                                                            "sessions",
+                                                                            "projects",
+                                                                        }
 
-                                                                        def test_list_bundles_excludes_identity_sections(self):
+                                                                        def test_list_bundles_excludes_identity_sections(
+                                                                            self,
+                                                                        ):
                                                                             """soul, user etc. should not appear in bundles list."""
-                                                                            resp = client.get(f"/vault/bundles?session_id={self.SID}")
-                                                                            bundles = resp.json()["bundles"]
-                                                                            assert "harness" not in bundles
-                                                                            assert "user" not in bundles
+                                                                            resp = client.get(
+                                                                                f"/vault/bundles?session_id={self.SID}"
+                                                                            )
+                                                                            bundles = resp.json()[
+                                                                                "bundles"
+                                                                            ]
+                                                                            assert (
+                                                                                "harness"
+                                                                                not in bundles
+                                                                            )
+                                                                            assert (
+                                                                                "user"
+                                                                                not in bundles
+                                                                            )
 
-                                                                            def test_list_bundles_nonexistent_session(self):
-                                                                                resp = client.get("/vault/bundles?session_id=no-such-session")
-                                                                                assert resp.status_code == 404
+                                                                            def test_list_bundles_nonexistent_session(
+                                                                                self,
+                                                                            ):
+                                                                                resp = client.get(
+                                                                                    "/vault/bundles?session_id=no-such-session"
+                                                                                )
+                                                                                assert (
+                                                                                    resp.status_code
+                                                                                    == 404
+                                                                                )
 
-                                                                                def test_list_bundles_empty_when_no_bundles(self):
+                                                                                def test_list_bundles_empty_when_no_bundles(
+                                                                                    self,
+                                                                                ):
                                                                                     # session with no dir: entries
                                                                                     _store.clear()
-                                                                                    _make_session(self.SID) # only soul + user (no dir: keys)
-                                                                                    resp = client.get(f"/vault/bundles?session_id={self.SID}")
-                                                                                    assert resp.status_code == 200
-                                                                                    assert resp.json()["bundles"] == []
-
+                                                                                    _make_session(
+                                                                                        self.SID
+                                                                                    )  # only soul + user (no dir: keys)
+                                                                                    resp = client.get(
+                                                                                        f"/vault/bundles?session_id={self.SID}"
+                                                                                    )
+                                                                                    assert (
+                                                                                        resp.status_code
+                                                                                        == 200
+                                                                                    )
+                                                                                    assert (
+                                                                                        resp.json()[
+                                                                                            "bundles"
+                                                                                        ]
+                                                                                        == []
+                                                                                    )
 
                                                                                     # ---------------------------------------------------------------------------
                                                                                     # GET /vault/bundle/{name} — pull a bundle
@@ -263,79 +348,187 @@ def _make_session(session_id: str, extra_section_ids: dict | None = None) -> Ses
                                                                                         FILES = {
                                                                                             "2026-03-17-session.md": "# Session\nFixed chunking bug.",
                                                                                             "notes/extra.md": "Extra note content here.",
-                                                                                            }
+                                                                                        }
 
-                                                                                        def setup_method(self):
+                                                                                        def setup_method(
+                                                                                            self,
+                                                                                        ):
                                                                                             _store.clear()
-                                                                                            _make_session(self.SID, extra_section_ids={
-                                                                                                f"dir:{self.BUNDLE_NAME}": self.BUNDLE_FILE_ID,
-                                                                                                })
+                                                                                            _make_session(
+                                                                                                self.SID,
+                                                                                                extra_section_ids={
+                                                                                                    f"dir:{self.BUNDLE_NAME}": self.BUNDLE_FILE_ID,
+                                                                                                },
+                                                                                            )
 
                                                                                             # load_context returns the DECRYPTED plaintext (compress(bundle_bytes)).
                                                                                             # The route then calls decompress() on it — so mock must return the compressed payload.
-                                                                                            bundle_bytes = bundle_from_dict(self.FILES)
-                                                                                            self._plaintext = compress(bundle_bytes)
+                                                                                            bundle_bytes = bundle_from_dict(
+                                                                                                self.FILES
+                                                                                            )
+                                                                                            self._plaintext = compress(
+                                                                                                bundle_bytes
+                                                                                            )
 
-                                                                                            def teardown_method(self):
+                                                                                            def teardown_method(
+                                                                                                self,
+                                                                                            ):
                                                                                                 _store.clear()
 
-                                                                                                def test_pull_bundle_content(self):
-                                                                                                    with patch("api.routes.vault.load_context", return_value=self._plaintext):
-                                                                                                        resp = client.get(f"/vault/bundle/{self.BUNDLE_NAME}?session_id={self.SID}")
+                                                                                                def test_pull_bundle_content(
+                                                                                                    self,
+                                                                                                ):
+                                                                                                    with patch(
+                                                                                                        "api.routes.vault.load_context",
+                                                                                                        return_value=self._plaintext,
+                                                                                                    ):
+                                                                                                        resp = client.get(
+                                                                                                            f"/vault/bundle/{self.BUNDLE_NAME}?session_id={self.SID}"
+                                                                                                        )
 
-                                                                                                        assert resp.status_code == 200
-                                                                                                        body = resp.json()
-                                                                                                        assert body["bundle_name"] == self.BUNDLE_NAME
-                                                                                                        assert body["files"] == self.FILES
+                                                                                                        assert (
+                                                                                                            resp.status_code
+                                                                                                            == 200
+                                                                                                        )
+                                                                                                        body = (
+                                                                                                            resp.json()
+                                                                                                        )
+                                                                                                        assert (
+                                                                                                            body[
+                                                                                                                "bundle_name"
+                                                                                                            ]
+                                                                                                            == self.BUNDLE_NAME
+                                                                                                        )
+                                                                                                        assert (
+                                                                                                            body[
+                                                                                                                "files"
+                                                                                                            ]
+                                                                                                            == self.FILES
+                                                                                                        )
 
-                                                                                                    def test_pull_nonexistent_bundle(self):
-                                                                                                        resp = client.get(f"/vault/bundle/does-not-exist?session_id={self.SID}")
-                                                                                                        assert resp.status_code == 404
+                                                                                                    def test_pull_nonexistent_bundle(
+                                                                                                        self,
+                                                                                                    ):
+                                                                                                        resp = client.get(
+                                                                                                            f"/vault/bundle/does-not-exist?session_id={self.SID}"
+                                                                                                        )
+                                                                                                        assert (
+                                                                                                            resp.status_code
+                                                                                                            == 404
+                                                                                                        )
 
-                                                                                                        def test_pull_nonexistent_session(self):
-                                                                                                            resp = client.get(f"/vault/bundle/{self.BUNDLE_NAME}?session_id=no-session")
-                                                                                                            assert resp.status_code == 404
+                                                                                                        def test_pull_nonexistent_session(
+                                                                                                            self,
+                                                                                                        ):
+                                                                                                            resp = client.get(
+                                                                                                                f"/vault/bundle/{self.BUNDLE_NAME}?session_id=no-session"
+                                                                                                            )
+                                                                                                            assert (
+                                                                                                                resp.status_code
+                                                                                                                == 404
+                                                                                                            )
 
-                                                                                                            def test_pull_invalid_bundle_name(self):
-                                                                                                                resp = client.get(f"/vault/bundle/INVALID NAME?session_id={self.SID}")
+                                                                                                            def test_pull_invalid_bundle_name(
+                                                                                                                self,
+                                                                                                            ):
+                                                                                                                resp = client.get(
+                                                                                                                    f"/vault/bundle/INVALID NAME?session_id={self.SID}"
+                                                                                                                )
                                                                                                                 # FastAPI will URL-encode the space, resulting in 404 (not found in index) or 422
                                                                                                                 # Either is acceptable — the key point is it doesn't 200 with garbage
-                                                                                                                assert resp.status_code in (404, 422)
-
+                                                                                                                assert (
+                                                                                                                    resp.status_code
+                                                                                                                    in (
+                                                                                                                        404,
+                                                                                                                        422,
+                                                                                                                    )
+                                                                                                                )
 
                                                                                                                 # ---------------------------------------------------------------------------
                                                                                                                 # bundle_from_dict / unbundle_to_dict round-trip (unit)
                                                                                                                 # ---------------------------------------------------------------------------
 
                                                                                                                 class TestBundleUtils:
-                                                                                                                    def test_bundle_roundtrip(self):
-                                                                                                                        from src.vault import unbundle_to_dict
+                                                                                                                    def test_bundle_roundtrip(
+                                                                                                                        self,
+                                                                                                                    ):
+                                                                                                                        from src.vault import (
+                                                                                                                            unbundle_to_dict,
+                                                                                                                        )
+
                                                                                                                         files = {
                                                                                                                             "a.md": "# A\nContent A.",
                                                                                                                             "subdir/b.md": "# B\nContent B.",
-                                                                                                                            }
-                                                                                                                        bundle = bundle_from_dict(files)
-                                                                                                                        result = unbundle_to_dict(bundle)
-                                                                                                                        assert result == files
+                                                                                                                        }
+                                                                                                                        bundle = bundle_from_dict(
+                                                                                                                            files
+                                                                                                                        )
+                                                                                                                        result = unbundle_to_dict(
+                                                                                                                            bundle
+                                                                                                                        )
+                                                                                                                        assert (
+                                                                                                                            result
+                                                                                                                            == files
+                                                                                                                        )
 
-                                                                                                                        def test_bundle_sorted_keys(self):
+                                                                                                                        def test_bundle_sorted_keys(
+                                                                                                                            self,
+                                                                                                                        ):
                                                                                                                             """bundle_from_dict should produce deterministic output (sorted keys)."""
-                                                                                                                            files_a = {"z.md": "z", "a.md": "a"}
-                                                                                                                            files_b = {"a.md": "a", "z.md": "z"}
-                                                                                                                            assert bundle_from_dict(files_a) == bundle_from_dict(files_b)
+                                                                                                                            files_a = {
+                                                                                                                                "z.md": "z",
+                                                                                                                                "a.md": "a",
+                                                                                                                            }
+                                                                                                                            files_b = {
+                                                                                                                                "a.md": "a",
+                                                                                                                                "z.md": "z",
+                                                                                                                            }
+                                                                                                                            assert bundle_from_dict(
+                                                                                                                                files_a
+                                                                                                                            ) == bundle_from_dict(
+                                                                                                                                files_b
+                                                                                                                            )
 
-                                                                                                                            def test_bundle_empty_content(self):
-                                                                                                                                files = {"empty.md": ""}
-                                                                                                                                bundle = bundle_from_dict(files)
-                                                                                                                                from src.vault import unbundle_to_dict
-                                                                                                                                assert unbundle_to_dict(bundle) == files
+                                                                                                                            def test_bundle_empty_content(
+                                                                                                                                self,
+                                                                                                                            ):
+                                                                                                                                files = {
+                                                                                                                                    "empty.md": ""
+                                                                                                                                }
+                                                                                                                                bundle = bundle_from_dict(
+                                                                                                                                    files
+                                                                                                                                )
+                                                                                                                                from src.vault import (
+                                                                                                                                    unbundle_to_dict,
+                                                                                                                                )
 
-                                                                                                                                def test_bundle_unicode_content(self):
-                                                                                                                                    files = {"unicode.md": "日本語テスト — émojis 🎉"}
-                                                                                                                                    bundle = bundle_from_dict(files)
-                                                                                                                                    from src.vault import unbundle_to_dict
-                                                                                                                                    result = unbundle_to_dict(bundle)
-                                                                                                                                    assert result == files
+                                                                                                                                assert (
+                                                                                                                                    unbundle_to_dict(
+                                                                                                                                        bundle
+                                                                                                                                    )
+                                                                                                                                    == files
+                                                                                                                                )
+
+                                                                                                                                def test_bundle_unicode_content(
+                                                                                                                                    self,
+                                                                                                                                ):
+                                                                                                                                    files = {
+                                                                                                                                        "unicode.md": "日本語テスト — émojis 🎉"
+                                                                                                                                    }
+                                                                                                                                    bundle = bundle_from_dict(
+                                                                                                                                        files
+                                                                                                                                    )
+                                                                                                                                    from src.vault import (
+                                                                                                                                        unbundle_to_dict,
+                                                                                                                                    )
+
+                                                                                                                                    result = unbundle_to_dict(
+                                                                                                                                        bundle
+                                                                                                                                    )
+                                                                                                                                    assert (
+                                                                                                                                        result
+                                                                                                                                        == files
+                                                                                                                                    )
 
 
 # ---------------------------------------------------------------------------
@@ -423,7 +616,10 @@ class TestVaultUpgrade:
         assert session.full_section_ids["system"] == "0.0.3002"
         assert "system" in session.start_hashes
         # Content should reference vault/MCP/RAG
-        assert "Vault" in session.context_sections["system"] or "vault" in session.context_sections["system"].lower()
+        assert (
+            "Vault" in session.context_sections["system"]
+            or "vault" in session.context_sections["system"].lower()
+        )
 
     def test_upgrade_idempotent_when_system_already_present(self):
         """Calling upgrade on a vault that already has the system section is a no-op."""

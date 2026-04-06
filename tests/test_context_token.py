@@ -11,7 +11,7 @@ import pytest
 
 @pytest.mark.skipif(
     os.getenv("HEDERA_NETWORK", "mock") != "testnet",
-    reason="Network tests only run on testnet — mainnet would cost real HBAR"
+    reason="Network tests only run on testnet — mainnet would cost real HBAR",
 )
 class TestContextTokenNetwork:
     """Integration tests — require valid .env with testnet credentials (HEDERA_NETWORK=testnet)."""

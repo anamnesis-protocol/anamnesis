@@ -38,14 +38,33 @@ from pathlib import Path
 # Ensure src/ importable
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import json as _json
 from dotenv import load_dotenv
-load_dotenv()
+
+if os.environ.get("SOVEREIGN_ENV") == "testnet":
+    load_dotenv(Path(__file__).parent.parent / ".env.testnet", override=True)
+    # Drake vault mappings — must be set before vault.py reads them at import time
+    os.environ.setdefault("VAULT_ROOT", "D:/symbiote_suit")
+    os.environ.setdefault("CONTEXT_TOKEN_ID", "0.0.8252163")
+    os.environ.setdefault(
+        "VAULT_SECTIONS_JSON",
+        _json.dumps(
+            {
+                "harness": "Knowledge/SOUL.md",
+                "user": "Personas/USER.md",
+                "config": "Personas/Symbiote.md",
+                "session_state": "System/Session-State.md",
+            }
+        ),
+    )
+else:
+    load_dotenv()
 
 from src.vault import (
- VAULT_ROOT,
- VAULT_SECTIONS,
- CONTEXT_TOKEN_ID,
- pull_all,
+    VAULT_ROOT,
+    VAULT_SECTIONS,
+    CONTEXT_TOKEN_ID,
+    pull_all,
 )
 from src.event_log import log_event
 
@@ -63,6 +82,7 @@ START_HASHES_FILE = Path(__file__).parent.parent / ".session_start_hashes.json"
 # Lock helpers
 # ---------------------------------------------------------------------------
 
+
 def _already_ran() -> bool:
     """Return True if the guard ran within GUARD_TTL_HOURS."""
     if not LOCK_FILE.exists():
@@ -78,6 +98,7 @@ def _set_lock() -> None:
 # ---------------------------------------------------------------------------
 # Local hash helpers
 # ---------------------------------------------------------------------------
+
 
 def local_section_hashes() -> dict[str, str]:
     """SHA-256 hex of each vault section file currently on disk."""
@@ -121,7 +142,9 @@ def load_start_hashes() -> dict:
         canonical = json.dumps(data, sort_keys=True, separators=(",", ":"))
         computed = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
         if computed != stored_hash:
-            print("[session-guard] WARN: .session_start_hashes.json integrity failed — possible tampering.")
+            print(
+                "[session-guard] WARN: .session_start_hashes.json integrity failed — possible tampering."
+            )
             return {}
     return data
 
@@ -129,6 +152,7 @@ def load_start_hashes() -> dict:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def run(force: bool = False) -> None:
     if not force and _already_ran():

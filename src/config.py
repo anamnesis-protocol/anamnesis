@@ -8,13 +8,16 @@ Network selection:
 
 Set SOVEREIGN_ENV before running any script or the API server.
 """
+
 import os
 from dotenv import load_dotenv
 
 # Skip dotenv when running inside Railway — env vars are already injected.
 # load_dotenv with override=True would clobber them with local .env values.
 if not os.getenv("RAILWAY_ENVIRONMENT"):
-    _env_file = ".env.testnet" if os.getenv("SOVEREIGN_ENV", "").strip().lower() == "testnet" else ".env"
+    _env_file = (
+        ".env.testnet" if os.getenv("SOVEREIGN_ENV", "").strip().lower() == "testnet" else ".env"
+    )
     load_dotenv(_env_file, override=True)
 
 
@@ -41,9 +44,7 @@ def get_treasury():
     """Return (treasury_id, treasury_key) for token operations."""
     from hiero_sdk_python import AccountId, PrivateKey
 
-    treasury_id = AccountId.from_string(
-        os.environ.get("TREASURY_ID") or os.environ["OPERATOR_ID"]
-    )
+    treasury_id = AccountId.from_string(os.environ.get("TREASURY_ID") or os.environ["OPERATOR_ID"])
     treasury_key = PrivateKey.from_string(
         os.environ.get("TREASURY_KEY") or os.environ["OPERATOR_KEY"]
     )

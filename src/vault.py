@@ -34,7 +34,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from src.config import get_client, get_treasury, get_validator_contract_id
-from src.crypto import make_challenge, derive_key, encrypt_context, decrypt_context, compress, decompress
+from src.crypto import (
+    make_challenge,
+    derive_key,
+    encrypt_context,
+    decrypt_context,
+    compress,
+    decompress,
+)
 from src.context_storage import store_context, load_context, update_context
 from src.contract import (
     token_id_to_evm_address,
@@ -108,6 +115,7 @@ _INJECTION_PATTERNS = [
 # Key derivation — purpose-separated
 # ---------------------------------------------------------------------------
 
+
 def get_wallet_signature(token_id: str) -> bytes:
     """
     Sign the sovereign-ai-context challenge with the operator's ED25519 key.
@@ -164,6 +172,7 @@ def get_package_key(token_id: str) -> bytes:
 # Context integrity verification (Claims 6-7 / AI-Security LLM01)
 # ---------------------------------------------------------------------------
 
+
 def verify_content(
     content: bytes,
     label: str,
@@ -190,9 +199,7 @@ def verify_content(
     try:
         text = content.decode("utf-8")
     except UnicodeDecodeError as e:
-        raise ValueError(
-            f"[integrity:{label}] UTF-8 decode failed — possible corruption: {e}"
-        )
+        raise ValueError(f"[integrity:{label}] UTF-8 decode failed — possible corruption: {e}")
 
     # 2. Non-empty
     if not text.strip():
@@ -220,6 +227,7 @@ def verify_content(
 # AAD helpers — purpose-binding for AES-GCM (security audit H1 fix)
 # ---------------------------------------------------------------------------
 
+
 def _make_section_aad(section_name: str, token_id: str) -> bytes:
     """AAD for vault section ciphertexts: b"section:{name}:{token_id}"."""
     return f"section:{section_name}:{token_id}".encode("utf-8")
@@ -243,6 +251,7 @@ def _make_package_index_aad(token_id: str) -> bytes:
 # ---------------------------------------------------------------------------
 # Directory bundle helpers (Phase 2)
 # ---------------------------------------------------------------------------
+
 
 def bundle_directory(
     dir_path: Path,
@@ -410,6 +419,7 @@ def pull_dir_section(
 # Section push / pull
 # ---------------------------------------------------------------------------
 
+
 def push_section(
     section_name: str,
     content: bytes,
@@ -485,6 +495,7 @@ def pull_section(
 # ---------------------------------------------------------------------------
 # Vault index push / pull
 # ---------------------------------------------------------------------------
+
 
 def push_index(
     index: dict[str, str],
@@ -563,6 +574,7 @@ def pull_index(index_file_id: str, key: bytes, token_id: str) -> dict[str, str]:
 # Local index cache
 # ---------------------------------------------------------------------------
 
+
 def load_local_index() -> dict:
     """
     Load the local .vault_index.json cache, or return empty dict.
@@ -606,6 +618,7 @@ def save_local_index(data: dict) -> None:
 # ---------------------------------------------------------------------------
 # High-level: push_all / pull_all
 # ---------------------------------------------------------------------------
+
 
 def push_all(force_new: bool = False) -> dict[str, str]:
     """

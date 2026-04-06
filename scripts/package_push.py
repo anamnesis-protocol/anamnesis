@@ -26,13 +26,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from src.memory_packages import (
- PACKAGE_CATEGORIES,
- SKIP_NAMES,
- SKIP_EXTENSIONS,
- push_all_packages,
+    PACKAGE_CATEGORIES,
+    SKIP_NAMES,
+    SKIP_EXTENSIONS,
+    push_all_packages,
 )
 
 
@@ -49,7 +50,8 @@ def dry_run(categories: list[str]) -> None:
             continue
 
         files = [
-            f for f in sorted(cat_dir.iterdir())
+            f
+            for f in sorted(cat_dir.iterdir())
             if f.is_file()
             and f.name not in SKIP_NAMES
             and f.suffix not in SKIP_EXTENSIONS
