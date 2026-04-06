@@ -40,17 +40,24 @@ def get_current_user(authorization: str = Header(default="")) -> str:
     if not jwt_secret:
         raise HTTPException(status_code=503, detail="Auth not configured — SUPABASE_JWT_SECRET missing.")
 
+    # Decode header without verification to detect the algorithm
+    try:
+        header = jwt.get_unverified_header(token)
+        alg = header.get("alg", "HS256")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Malformed token header.")
+
     try:
         payload = jwt.decode(
             token,
             jwt_secret,
-            algorithms=["HS256"],
+            algorithms=[alg],
             audience="authenticated",
         )
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired — please log in again.")
     except jwt.PyJWTError as exc:
-        raise HTTPException(status_code=401, detail=f"Invalid token: {exc}")
+        raise HTTPException(status_code=401, detail=f"Invalid token (alg={alg}): {exc}")
 
     user_id: str = payload.get("sub", "")
     if not user_id:
