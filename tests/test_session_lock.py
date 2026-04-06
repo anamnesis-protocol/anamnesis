@@ -230,10 +230,11 @@ class TestSessionLifecycleLocking:
 
 
 class TestConcurrentSessionHttp:
-    def test_second_open_returns_409(self):
+    def test_second_open_auto_closes_existing(self):
         """
         When a vault has an active session, a second /session/open for the same
-        token_id must return 409 Conflict.
+        token_id must auto-close the existing session rather than returning 409.
+        The orphaned session should be evicted from the store.
         """
         from api.main import app
 
@@ -245,7 +246,7 @@ class TestConcurrentSessionHttp:
         _insert_active_session(TOKEN, "existing-session-id")
         store._locks[TOKEN] = "existing-session-id"
 
-        # Attempt to open a second session — should hit the 409 check in session.py
+        # Second open should evict the existing session and not return 409
         with patch("api.routes.session.get_lock_holder", return_value="existing-session-id"):
             resp = client.post(
                 "/session/open",
@@ -256,5 +257,4 @@ class TestConcurrentSessionHttp:
                 },
             )
 
-        assert resp.status_code == 409
-        assert "active session" in resp.json()["detail"].lower()
+        assert resp.status_code != 409
