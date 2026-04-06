@@ -615,7 +615,9 @@ def save_local_index(data: dict) -> None:
             json.dump(cache_with_hash, f, indent=2)
         print(f" Local index cache updated: {VAULT_INDEX_CACHE}")
     except PermissionError:
-        print(f" Warning: could not update local index cache (permission denied): {VAULT_INDEX_CACHE}")
+        print(
+            f" Warning: could not update local index cache (permission denied): {VAULT_INDEX_CACHE}"
+        )
 
 
 # ---------------------------------------------------------------------------
