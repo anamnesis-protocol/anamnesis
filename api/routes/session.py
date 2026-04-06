@@ -131,14 +131,9 @@ def open_session(
     # ---- Reject concurrent open for the same vault (409 if active session exists) ----
     existing_holder = get_lock_holder(token_id)
     if existing_holder:
-        from api.session_store import get_session as _get_session
-        if _get_session(existing_holder):  # non-expired → active
-            raise HTTPException(
-                status_code=409,
-                detail=f"Token {token_id} already has an active session. "
-                "Close the existing session before opening a new one.",
-            )
-        # Stale / expired lock — evict before proceeding
+        # Auto-close any existing session (active or stale) before opening a new one.
+        # Browsers can crash or navigate away without triggering the close endpoint,
+        # leaving orphaned sessions. Silently evict rather than forcing the user to retry.
         close_session(existing_holder)
 
     # ---- Derive IKM from passphrase ----
