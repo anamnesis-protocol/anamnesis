@@ -180,3 +180,17 @@ class BundlePullResponse(BaseModel):
  files: dict[str, str] = Field(
  description="Bundle contents: {relative_path: utf-8 content string}."
  )
+
+
+class VaultDeleteRequest(BaseModel):
+    token_id: str = Field(description="Hedera context token ID (e.g. '0.0.12345').")
+    serial: int = Field(default=1, description="Token serial number.")
+    passphrase: str = Field(description="Vault passphrase — used to derive index key and read file IDs.")
+
+
+class VaultDeleteResponse(BaseModel):
+    token_id: str
+    files_deleted: list[str]
+    files_failed: list[str]
+    hcs_logged: bool
+    message: str

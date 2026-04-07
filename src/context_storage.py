@@ -225,6 +225,35 @@ def update_context(
     )
 
 
+def delete_file(file_id: str) -> bool:
+    """
+    Delete a file from Hedera File Service.
+
+    Uses FileDeleteTransaction signed by the treasury key (which controls all HFS files).
+    Returns True on success, False if the file was already deleted or not found.
+
+    Args:
+        file_id: HFS file ID string (e.g. "0.0.22222")
+    """
+    from hiero_sdk_python import FileDeleteTransaction
+
+    _validate_file_id(file_id)
+    client = get_client()
+    _, treasury_key = get_treasury()
+
+    try:
+        (
+            FileDeleteTransaction()
+            .set_file_id(FileId.from_string(file_id))
+            .freeze_with(client)
+            .sign(treasury_key)
+            .execute(client)
+        )
+        return True
+    except Exception:
+        return False
+
+
 def get_file_info(file_id: str) -> dict:
     """Fetch HFS file metadata (size, keys, expiration) without reading content."""
     client = get_client()

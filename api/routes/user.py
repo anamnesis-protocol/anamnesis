@@ -48,6 +48,8 @@ from api.models import (
     ProvisionCompleteRequest,
     ProvisionCompleteResponse,
     UserStatusResponse,
+    VaultDeleteRequest,
+    VaultDeleteResponse,
 )
 from api.provision_store import create_pending, get_pending, complete_pending
 
@@ -493,4 +495,115 @@ def user_status(token_id: str) -> UserStatusResponse:
         registered=False,
         index_file_id=None,
         message="No vault registered for this token. Run /provision/complete first.",
+    )
+
+
+# ---------------------------------------------------------------------------
+# DELETE /user/vault — delete all HFS files for a vault
+# ---------------------------------------------------------------------------
+
+@router.delete("/vault", response_model=VaultDeleteResponse)
+def delete_vault(req: VaultDeleteRequest) -> VaultDeleteResponse:
+    """
+    Delete all HFS files belonging to a vault (sections + index).
+
+    Flow:
+    1. Derive index_key from passphrase + token_id
+    2. Resolve index_file_id from contract
+    3. Decrypt vault index → get all section file IDs
+    4. FileDeleteTransaction for each section file + index file
+    5. Log VAULT_DELETED to HCS
+
+    Note: HCS audit log entries (SESSION_STARTED, SESSION_ENDED, VAULT_PROVISIONED)
+    are immutable public ledger records and cannot be deleted by design.
+    Only HFS file content (encrypted vault sections) is deleted here.
+    """
+    from src.context_storage import delete_file
+    from src.vault import pull_index
+    from cryptography.exceptions import InvalidTag
+
+    token_id = req.token_id
+
+    # Evict any active session for this token before deleting
+    from api.session_store import get_lock_holder, close_session as _close_session
+    existing = get_lock_holder(token_id)
+    if existing:
+        _close_session(existing)
+
+    # Derive index key from passphrase
+    if not req.passphrase or len(req.passphrase) < 8:
+        raise HTTPException(status_code=400, detail="Passphrase must be at least 8 characters.")
+    ikm = hashlib.sha256(req.passphrase.encode("utf-8")).digest()
+    index_key = derive_key(token_id, ikm, info=_INFO_INDEX)
+
+    # Resolve index_file_id from contract
+    contract_id = get_validator_contract_id()
+    if not contract_id:
+        raise HTTPException(status_code=503, detail="VALIDATOR_CONTRACT_ID not configured.")
+    try:
+        token_evm = token_id_to_evm_address(token_id)
+        index_file_id = _get_registered_file_id(contract_id, token_evm, req.serial)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Contract query failed: {exc}")
+
+    if not index_file_id:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No vault registered for token {token_id} serial {req.serial}.",
+        )
+
+    # Decrypt index to get all section file IDs
+    try:
+        section_ids = pull_index(index_file_id, index_key, token_id)
+    except InvalidTag:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication failed: passphrase could not decrypt vault index.",
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Vault index read failed: {exc}")
+
+    # Collect all file IDs to delete (sections + index)
+    _META_KEYS = {"_section_hashes"}
+    file_ids_to_delete = [
+        fid for key, fid in section_ids.items()
+        if key not in _META_KEYS and isinstance(fid, str) and fid
+    ]
+    file_ids_to_delete.append(index_file_id)
+
+    # Delete each file — best effort, collect failures
+    deleted: list[str] = []
+    failed: list[str] = []
+    for fid in file_ids_to_delete:
+        if delete_file(fid):
+            deleted.append(fid)
+        else:
+            failed.append(fid)
+
+    # Log VAULT_DELETED to HCS
+    hcs_logged = False
+    try:
+        log_event(
+            event_type="VAULT_DELETED",
+            payload={
+                "token_id": token_id,
+                "serial": req.serial,
+                "files_deleted": deleted,
+                "files_failed": failed,
+            },
+            blocking=True,
+        )
+        hcs_logged = True
+    except Exception:
+        pass
+
+    return VaultDeleteResponse(
+        token_id=token_id,
+        files_deleted=deleted,
+        files_failed=failed,
+        hcs_logged=hcs_logged,
+        message=(
+            f"Vault files deleted: {len(deleted)} succeeded, {len(failed)} failed. "
+            "HCS audit records are permanent public ledger entries and cannot be removed."
+        ),
     )
