@@ -42,13 +42,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Generate Arty Fitchel's promo keys")
     parser.add_argument("--count", type=int, default=1, help="Number of keys to generate")
     parser.add_argument("--note", type=str, default="", help="Optional note stored with the keys")
+    parser.add_argument("--vip", action="store_true", help="Mark keys as VIP (no subscription required, permanent access)")
     parser.add_argument("--dry-run", action="store_true", help="Print keys without inserting")
     args = parser.parse_args()
 
     keys = [generate_key() for _ in range(args.count)]
 
+    key_type = "VIP" if args.vip else "promo"
+
     if args.dry_run:
-        print(f"[DRY RUN] Generated {len(keys)} key(s):")
+        print(f"[DRY RUN] Generated {len(keys)} {key_type} key(s):")
         for k in keys:
             print(f"  {k}")
         return
@@ -66,14 +69,14 @@ def main() -> None:
         "Content-Type": "application/json",
         "Prefer": "return=minimal",
     }
-    rows = [{"key": k, "note": args.note or None} for k in keys]
+    rows = [{"key": k, "note": args.note or None, "vip": args.vip} for k in keys]
 
     res = requests.post(endpoint, headers=headers, data=json.dumps(rows), timeout=10)
     if res.status_code not in (200, 201):
         print(f"ERROR {res.status_code}: {res.text}", file=sys.stderr)
         sys.exit(1)
 
-    print(f"Inserted {len(keys)} promo key(s):")
+    print(f"Inserted {len(keys)} {key_type} key(s):")
     for k in keys:
         print(f"  {k}")
 

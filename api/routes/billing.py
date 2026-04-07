@@ -268,8 +268,12 @@ def billing_status(user_id: str = Depends(get_current_user)):
 
     status = data.get("status", "inactive")
 
+    # Normalise vip — permanent access, always active
+    if status == "vip":
+        status = "active"
+
     # Normalise trial status — treat as active if within trial window
-    if status == "trial":
+    elif status == "trial":
         trial_ends_at = data.get("trial_ends_at")
         if trial_ends_at:
             from datetime import datetime, timezone
