@@ -127,6 +127,17 @@ MODELS: dict[str, dict] = {
         "display": "Nemotron 120B (Free)",
         "env_key": "OPENROUTER_API_KEY",
     },
+    # ── xAI / Grok ───────────────────────────────────────────────────────────
+    "grok-3": {
+        "provider": "xai",
+        "display": "Grok 3 (xAI)",
+        "env_key": "XAI_API_KEY",
+    },
+    "grok-3-mini": {
+        "provider": "xai",
+        "display": "Grok 3 Mini (xAI)",
+        "env_key": "XAI_API_KEY",
+    },
     # ── Ollama (local models — zero data leaves the machine) ─────────────────
     # env_key holds the server base URL, not an API key.
     # User must have pulled the model: `ollama pull llama3.2`
@@ -741,6 +752,46 @@ async def _stream_openrouter(
 
 
 # ---------------------------------------------------------------------------
+# Provider: xAI / Grok (OpenAI-compatible API)
+# ---------------------------------------------------------------------------
+
+async def _stream_xai(
+    model_id: str,
+    system_prompt: str,
+    history: list[dict],
+    message: str,
+    user_api_keys: dict | None = None,
+) -> AsyncIterator[str]:
+    try:
+        from openai import AsyncOpenAI
+    except ImportError:
+        yield _sse("[ERROR] openai package not installed. Run: pip install openai", done=True)
+        return
+
+    api_key = _resolve_api_key("XAI_API_KEY", "xai", user_api_keys)
+    client = AsyncOpenAI(base_url="https://api.x.ai/v1", api_key=api_key)
+
+    messages = [{"role": "system", "content": system_prompt}]
+    messages += history
+    messages.append({"role": "user", "content": message})
+
+    try:
+        stream = await client.chat.completions.create(
+            model=model_id,
+            messages=messages,
+            stream=True,
+            max_tokens=2048,
+        )
+        async for chunk in stream:
+            delta = chunk.choices[0].delta.content
+            if delta:
+                yield _sse(delta)
+        yield _sse("", done=True)
+    except Exception as exc:
+        yield _sse(f"[ERROR] xAI: {exc}", done=True)
+
+
+# ---------------------------------------------------------------------------
 # Provider: Ollama (local server — OpenAI-compatible, zero data egress)
 # ---------------------------------------------------------------------------
 
@@ -837,6 +888,9 @@ async def stream_response(
             yield chunk
     elif provider == "groq":
         async for chunk in _stream_groq(model_id, system_prompt, history, message, user_api_keys=user_api_keys):
+            yield chunk
+    elif provider == "xai":
+        async for chunk in _stream_xai(model_id, system_prompt, history, message, user_api_keys=user_api_keys):
             yield chunk
     elif provider == "ollama":
         async for chunk in _stream_ollama(model_id, system_prompt, history, message, user_api_keys=user_api_keys):
