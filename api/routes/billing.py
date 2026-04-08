@@ -268,8 +268,8 @@ def billing_status(user_id: str = Depends(get_current_user)):
 
     status = data.get("status", "inactive")
 
-    # Normalise vip — permanent access, always active
-    if status == "vip":
+    # Normalise vip/founding — permanent access, always active
+    if status in ("vip", "founding"):
         status = "active"
 
     # Normalise trial status — treat as active if within trial window
