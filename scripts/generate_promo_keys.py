@@ -42,8 +42,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Generate Arty Fitchel's promo keys")
     parser.add_argument("--count", type=int, default=1, help="Number of keys to generate")
     parser.add_argument("--note", type=str, default="", help="Optional note stored with the keys")
-    parser.add_argument("--vip", action="store_true", help="Mark keys as VIP (no subscription required, permanent access)")
-    parser.add_argument("--founding", action="store_true", help="Mark keys as Founding Member (permanent access, founding member badge)")
+    parser.add_argument(
+        "--vip",
+        action="store_true",
+        help="Mark keys as VIP (no subscription required, permanent access)",
+    )
+    parser.add_argument(
+        "--founding",
+        action="store_true",
+        help="Mark keys as Founding Member (permanent access, founding member badge)",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Print keys without inserting")
     args = parser.parse_args()
 
@@ -74,7 +82,10 @@ def main() -> None:
         "Content-Type": "application/json",
         "Prefer": "return=minimal",
     }
-    rows = [{"key": k, "note": args.note or None, "vip": args.vip, "founding": args.founding} for k in keys]
+    rows = [
+        {"key": k, "note": args.note or None, "vip": args.vip, "founding": args.founding}
+        for k in keys
+    ]
 
     res = requests.post(endpoint, headers=headers, data=json.dumps(rows), timeout=10)
     if res.status_code not in (200, 201):

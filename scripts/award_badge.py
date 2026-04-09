@@ -52,8 +52,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Award a badge to an Arty Fitchel's user")
     parser.add_argument("--email", required=True, help="User's email address")
     parser.add_argument("--label", required=True, help="Badge label text (e.g. 'Early Adopter')")
-    parser.add_argument("--color", default="violet", choices=sorted(VALID_COLORS), help="Badge color (default: violet)")
-    parser.add_argument("--dry-run", action="store_true", help="Print what would happen without inserting")
+    parser.add_argument(
+        "--color",
+        default="violet",
+        choices=sorted(VALID_COLORS),
+        help="Badge color (default: violet)",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print what would happen without inserting"
+    )
     args = parser.parse_args()
 
     url = os.environ.get("SUPABASE_URL")
@@ -71,7 +78,9 @@ def main() -> None:
     print(f"Found user: {user_id}")
 
     if args.dry_run:
-        print(f"[DRY RUN] Would award badge '{args.label}' ({args.color}) to {args.email} ({user_id})")
+        print(
+            f"[DRY RUN] Would award badge '{args.label}' ({args.color}) to {args.email} ({user_id})"
+        )
         return
 
     endpoint = f"{url.rstrip('/')}/rest/v1/user_badges"
