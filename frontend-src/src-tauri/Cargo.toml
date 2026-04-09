@@ -1,10 +1,10 @@
 [package]
-name = "context-sovereignty"
+name = "artyfitchels"
 version = "0.1.0"
-description = "Sovereign AI Context — desktop client"
-authors = []
-license = ""
-repository = ""
+description = "Arty Fitchel's — Your AI companion that never resets"
+authors = ["Arty Fitchel's LLC"]
+license = "UNLICENSED"
+repository = "https://github.com/gamilu/artyfitchels"
 edition = "2021"
 rust-version = "1.60"
 

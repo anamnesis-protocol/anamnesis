@@ -1,2 +1,4 @@
 [toolchain]
+# Local Windows dev: GNU toolchain (no MSVC required)
+# CI overrides this per-platform via the workflow matrix
 channel = "stable-x86_64-pc-windows-gnu"
