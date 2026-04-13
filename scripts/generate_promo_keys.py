@@ -52,6 +52,12 @@ def main() -> None:
         action="store_true",
         help="Mark keys as Founding Member (permanent access, founding member badge)",
     )
+    parser.add_argument(
+        "--days",
+        type=int,
+        default=7,
+        help="Trial length in days for standard promo keys (default: 7). Ignored for --vip and --founding.",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Print keys without inserting")
     args = parser.parse_args()
 
@@ -83,7 +89,13 @@ def main() -> None:
         "Prefer": "return=minimal",
     }
     rows = [
-        {"key": k, "note": args.note or None, "vip": args.vip, "founding": args.founding}
+        {
+            "key": k,
+            "note": args.note or None,
+            "vip": args.vip,
+            "founding": args.founding,
+            "trial_days": args.days if not args.vip and not args.founding else None,
+        }
         for k in keys
     ]
 
