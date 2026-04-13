@@ -20,7 +20,7 @@ Sovereign AI Context uses Hedera Hashgraph to give you cryptographic proof of ow
 - **Theft-Proof**: Context is encrypted with a key derived from your wallet signature — only you can decrypt it
 - **Corruption-Proof**: Hedera's consensus service creates an immutable audit trail of every change
 - **Model-Agnostic**: Load your context into Claude, GPT-4, Gemini, or any AI model
-- **Verifiable Ownership**: Your soul token NFT proves cryptographic ownership on-chain
+- **Verifiable Ownership**: Your companion token NFT proves cryptographic ownership on-chain
 - **Permanent**: Memory persists on Hedera's decentralized network, not a company's server
 - **Intelligent Retrieval**: TF-IDF RAG surfaces relevant memory packages by semantic similarity
 
@@ -30,7 +30,7 @@ Sovereign AI Context uses Hedera Hashgraph to give you cryptographic proof of ow
 
 ### Hedera Layers
 
-**HTS (Hedera Token Service)** — Soul token NFT, proof of ownership. Your wallet signature is the only way to decrypt your data. Non-custodial, transferable, costs fractions of a cent to mint.
+**HTS (Hedera Token Service)** — Companion token NFT, proof of ownership. Your wallet signature is the only way to decrypt your data. Non-custodial, transferable, costs fractions of a cent to mint.
 
 **HFS (Hedera File Service)** — Encrypted context storage. Immutable by default, decentralized, verifiable via content hashes.
 
@@ -52,7 +52,7 @@ The encryption key is never stored. On each session:
 ## How It Works
 
 ### Setup (Once)
-1. Mint your soul token NFT on Hedera
+1. Mint your companion token NFT on Hedera
 2. Encrypt your AI's context with your wallet-derived key
 3. Upload encrypted context to HFS, linked to your token via smart contract
 4. Creation event logged to HCS
