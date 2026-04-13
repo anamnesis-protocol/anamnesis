@@ -50,7 +50,7 @@ export interface VaultStatusResponse {
 export interface SessionOpenResponse {
   session_id: string
   token_id: string
-  vault_sections: Record<string, string>
+  context_sections: Record<string, string>
   sections_loaded: string[]
   created_at: string
   expires_at: string
@@ -68,6 +68,76 @@ export interface ModelInfo {
   display: string
   provider: string
   available: boolean
+}
+
+// ---------------------------------------------------------------------------
+// Vault health
+// ---------------------------------------------------------------------------
+
+export type HealthStatus = 'pass' | 'warn' | 'critical' | 'unavailable'
+export type VaultOverall = 'healthy' | 'degraded' | 'critical'
+
+export interface VaultHealthResponse {
+  session_id: string
+  token_id: string
+  overall: VaultOverall
+  sections_loaded: string[]
+  checks: {
+    completeness: {
+      status: HealthStatus
+      sections_present: string[]
+      sections_missing: string[]
+      sections_empty: string[]
+    }
+    size: {
+      status: HealthStatus
+      sections: Array<{ section: string; chars: number; tokens_estimate: number; issue: string | null }>
+    }
+    structure: {
+      status: HealthStatus
+      issues: Array<{ section: string; issues: string[] }>
+    }
+    staleness: {
+      status: HealthStatus
+      last_date: string | null
+      days_since_update: number | null
+      note: string
+      warn_threshold_days: number
+      critical_threshold_days: number
+    }
+    metadata: {
+      status: HealthStatus
+      issues: Array<{ section: string; issues: string[] }>
+    }
+    duplicate_content: {
+      status: HealthStatus
+      duplicate_count: number
+      duplicates: Array<{ sections: string[]; preview: string }>
+      note: string
+    }
+    rag_index: {
+      status: HealthStatus
+      chunks: number
+      avg_chars_per_chunk: number
+      tiny_chunks: number
+      oversized_chunks: number
+      note: string
+    }
+    session_state_growth: {
+      status: HealthStatus
+      chars: number
+      tokens_estimate: number
+      warn_threshold_chars: number
+      critical_threshold_chars: number
+      note: string
+    }
+    hfs_registry: {
+      status: HealthStatus
+      registered_sections: string[]
+      unregistered_sections: string[]
+      index_file_id: string
+    }
+  }
 }
 
 export interface SkillSummary {
@@ -138,6 +208,9 @@ export const api = {
       return request<{ models: ModelInfo[] }>('GET', `/chat/models${qs}`)
     },
 
+    setKeys: (session_id: string, keys: Record<string, string>) =>
+      request<{ configured: string[] }>('POST', '/chat/keys', { session_id, keys }),
+
     /** Returns a ReadableStream of SSE tokens. Caller handles streaming. */
     streamMessage: (
       session_id: string,
@@ -150,6 +223,19 @@ export const api = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id, message, model, history }),
       }),
+  },
+
+  // ---------------------------------------------------------------------------
+  // Vault
+  // ---------------------------------------------------------------------------
+  vault: {
+    health: (session_id: string) =>
+      request<VaultHealthResponse>('GET', `/vault/health?session_id=${encodeURIComponent(session_id)}`),
+
+    repair: (session_id: string) =>
+      request<{ repairs_applied: number; fixed: number; improved: number; failed: number; repairs: Array<Record<string, unknown>>; note: string }>(
+        'POST', `/vault/health/repair?session_id=${encodeURIComponent(session_id)}`
+      ),
   },
 
   // ---------------------------------------------------------------------------

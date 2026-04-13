@@ -38,7 +38,7 @@ export default function ConnectScreen() {
   }
 
   async function handleReturnStart() {
-    if (!tokenId.trim()) return setErr('Enter your context token ID.')
+    if (!tokenId.trim()) return setErr('Enter your Companion ID.')
     setLoading(true); setError('')
     try {
       setBaseUrl(apiBaseUrl)
@@ -114,7 +114,7 @@ export default function ConnectScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Sovereign AI</Text>
+        <Text style={styles.title}>Arty Fitchels</Text>
         <TouchableOpacity onPress={() => setShowSettings(!showSettings)}>
           <Text style={styles.settingsIcon}>⚙</Text>
         </TouchableOpacity>
@@ -141,7 +141,7 @@ export default function ConnectScreen() {
 
       {/* Hero */}
       <View style={styles.hero}>
-        <Text style={styles.heroTitle}>Your AI Harness</Text>
+        <Text style={styles.heroTitle}>Train your own AI</Text>
         <Text style={styles.heroSub}>
           Encrypted directives. Owned by you.{'\n'}Works with any AI model.
         </Text>
@@ -155,7 +155,7 @@ export default function ConnectScreen() {
             onPress={() => setMode('returning')}
           >
             <Text style={[styles.toggleText, mode === 'returning' && styles.toggleTextActive]}>
-              I have a vault
+              I have a companion
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -163,7 +163,7 @@ export default function ConnectScreen() {
             onPress={() => setMode('new')}
           >
             <Text style={[styles.toggleText, mode === 'new' && styles.toggleTextActive]}>
-              New vault
+              New companion
             </Text>
           </TouchableOpacity>
         </View>
@@ -174,7 +174,7 @@ export default function ConnectScreen() {
         {/* Returning user form */}
         {step === 'form' && mode === 'returning' && (
           <>
-            <Text style={styles.label}>Context Token ID</Text>
+            <Text style={styles.label}>Companion ID</Text>
             <TextInput
               style={styles.input}
               value={tokenId}
@@ -193,7 +193,7 @@ export default function ConnectScreen() {
               {loading ? (
                 <ActivityIndicator color={colors.white} />
               ) : (
-                <Text style={styles.btnPrimaryText}>Connect to Vault</Text>
+                <Text style={styles.btnPrimaryText}>Connect to Companion</Text>
               )}
             </TouchableOpacity>
           </>
@@ -229,7 +229,7 @@ export default function ConnectScreen() {
               {loading ? (
                 <ActivityIndicator color={colors.white} />
               ) : (
-                <Text style={styles.btnPrimaryText}>Mint My Harness</Text>
+                <Text style={styles.btnPrimaryText}>Mint My Companion</Text>
               )}
             </TouchableOpacity>
           </>
@@ -282,7 +282,7 @@ export default function ConnectScreen() {
                   <ActivityIndicator color={colors.white} />
                 ) : (
                   <Text style={styles.btnPrimaryText}>
-                    {mode === 'new' ? 'Secure & Open' : 'Open Vault'}
+                    {mode === 'new' ? 'Connect' : 'Open Companion'}
                   </Text>
                 )}
               </TouchableOpacity>

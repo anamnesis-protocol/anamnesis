@@ -11,7 +11,7 @@ import { useAppStore } from '../../store/appStore'
 import { colors } from '../../theme'
 
 const SECTION_LABELS: Record<string, string> = {
-  harness: 'Harness',
+  harness: 'Companion',
   user: 'Profile',
   config: 'Config',
   session_state: 'Session',

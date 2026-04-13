@@ -2,14 +2,14 @@ import { useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 
 const SECTION_LABELS: Record<string, string> = {
-  harness: 'Harness Directives',
+  harness: 'Companion Directives',
   user: 'User Profile',
   config: 'AI Configuration',
   session_state: 'Session State',
 }
 
 const SECTION_DESCRIPTIONS: Record<string, string> = {
-  harness: "Your AI's core directives — mission, values, ground rules.",
+  harness: "Your AI companion's core directives — who it is and how it operates.",
   user: 'Your profile — preferences, background, goals.',
   config: "Your AI's tone, style, and expertise focus.",
   session_state: 'What was worked on and what comes next.',

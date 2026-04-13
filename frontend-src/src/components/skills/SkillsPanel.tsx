@@ -87,7 +87,7 @@ export default function SkillsPanel({ sessionId }: Props) {
             disabled={saveMutation.isPending || !name || !description || !instructions}
             className="btn-primary w-full"
           >
-            {saveMutation.isPending ? 'Saving…' : 'Save Skill to Vault'}
+            {saveMutation.isPending ? 'Saving…' : 'Save Skill to Companion'}
           </button>
         </div>
       )}

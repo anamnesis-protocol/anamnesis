@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useChat } from '../../hooks/useChat'
 import { useAppStore } from '../../store/appStore'
 import { api } from '../../api/client'
+import ModelConfigModal from './ModelConfigModal'
 
 interface Props {
   sessionId: string
@@ -11,8 +12,10 @@ interface Props {
 export default function ChatPanel({ sessionId }: Props) {
   const { activeModel, setActiveModel } = useAppStore()
   const [input, setInput] = useState('')
+  const [showConfig, setShowConfig] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const queryClient = useQueryClient()
 
   const { data: modelsData } = useQuery({
     queryKey: ['models', sessionId],
@@ -51,6 +54,7 @@ export default function ChatPanel({ sessionId }: Props) {
   }
 
   return (
+    <>
     <div className="flex flex-col h-full">
       {/* Toolbar */}
       <div className="flex items-center gap-3 px-4 py-2 border-b border-surface-border bg-surface-card">
@@ -67,9 +71,16 @@ export default function ChatPanel({ sessionId }: Props) {
             </option>
           ))}
         </select>
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setShowConfig(true)}
+            className="text-xs text-slate-400 hover:text-slate-200 px-2 py-1 rounded border border-surface-border hover:border-slate-500 transition-colors"
+            title="Configure AI model keys"
+          >
+            + Add Keys
+          </button>
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs text-emerald-400">Harness active</span>
+          <span className="text-xs text-emerald-400">Companion active</span>
         </div>
       </div>
 
@@ -78,7 +89,7 @@ export default function ChatPanel({ sessionId }: Props) {
         {messages.length === 0 && (
           <div className="text-center text-slate-500 text-sm mt-12">
             <div className="text-2xl mb-2">⬡</div>
-            <div>Your harness is loaded. Give your AI its orders.</div>
+            <div>Your AI companion is loaded.</div>
           </div>
         )}
         {messages.map((msg) => (
@@ -139,5 +150,17 @@ export default function ChatPanel({ sessionId }: Props) {
         )}
       </div>
     </div>
+
+    {showConfig && (
+      <ModelConfigModal
+        sessionId={sessionId}
+        onClose={() => setShowConfig(false)}
+        onSaved={() => {
+          queryClient.invalidateQueries({ queryKey: ['models', sessionId] })
+          setActiveModel('')
+        }}
+      />
+    )}
+    </>
   )
 }

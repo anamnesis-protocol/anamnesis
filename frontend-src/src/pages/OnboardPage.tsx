@@ -18,15 +18,15 @@ export default function OnboardPage() {
         <div className="w-full max-w-lg card space-y-6 text-center">
           <div>
             <div className="text-4xl mb-3">✅</div>
-            <h2 className="text-xl font-semibold text-slate-100">Vault Created</h2>
+            <h2 className="text-xl font-semibold text-slate-100">Companion Created</h2>
             <p className="text-slate-400 text-sm mt-2">
-              Your harness is live on Hedera. Customize your sections in the vault editor,
+              Your AI companion is live on Hedera. Customize your sections in the companion editor,
               or jump straight in and let your AI guide you.
             </p>
           </div>
           <div className="flex gap-3 justify-center">
             <button onClick={() => setView('session')} className="btn-primary">
-              Enter My Vault →
+              Meet My Companion →
             </button>
           </div>
         </div>

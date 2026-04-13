@@ -51,7 +51,7 @@ export default function SessionScreen() {
     if (hasPending) {
       Alert.alert(
         'Save changes?',
-        'You have unsaved vault edits. Save them before closing?',
+        'You have unsaved companion edits. Save them before closing?',
         [
           {
             text: 'Discard',
@@ -93,7 +93,7 @@ export default function SessionScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Vault Active</Text>
+          <Text style={styles.headerTitle}>Companion Active</Text>
           <Text style={styles.headerSub} numberOfLines={1}>
             {session.tokenId}
           </Text>

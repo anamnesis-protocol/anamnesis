@@ -9,7 +9,7 @@ export default function Header({ sessionId, tokenId, onClose }: HeaderProps) {
     <header className="border-b border-surface-border bg-surface-card px-6 py-3 flex items-center justify-between">
       <div className="flex items-center gap-3">
         <span className="text-brand text-xl font-bold">⬡</span>
-        <span className="font-semibold text-slate-100">Sovereign AI Context</span>
+        <span className="font-semibold text-slate-100">Arty Fitchels</span>
         <span className="badge badge-purple text-xs">PATENT PENDING</span>
       </div>
 

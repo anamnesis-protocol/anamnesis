@@ -64,6 +64,11 @@ class Session:
     # {...} → real user with at least one key → use those keys
     # Zeroed at session close alongside section_key and context_sections.
     user_api_keys: dict | None = None
+    # In-memory BM25 RAG index over chunked vault content — built at session open.
+    # Queried on each chat turn to inject only relevant context chunks.
+    # Cleared (VaultIndex.clear()) at session close alongside the crypto keys.
+    # Type: VaultIndex | None — import deferred to avoid circular dependency.
+    vault_index: object | None = None
 
     @property
     def expired(self) -> bool:
@@ -159,8 +164,7 @@ def create_session(
         index_file_id=index_file_id,
         full_section_ids=dict(full_section_ids),
         start_hashes={
-            name: hashlib.sha256(content).hexdigest()
-            for name, content in context_sections.items()
+            name: hashlib.sha256(content).hexdigest() for name, content in context_sections.items()
         },
         sections_loaded=list(context_sections.keys()),
         # Retain decoded context server-side for chat — client sends only session_id + message.
@@ -233,6 +237,13 @@ def _zero_and_evict(session_id: str, session: Session) -> Session:
             session.user_api_keys[k] = ""
         session.user_api_keys.clear()
     session.user_api_keys = None
+    # Destroy the in-memory RAG index (chunk texts + BM25 state)
+    if session.vault_index is not None:
+        try:
+            session.vault_index.clear()
+        except Exception:
+            pass
+        session.vault_index = None
     _store.pop(session_id, None)
     release_lock(session.token_id, session_id)
     return session

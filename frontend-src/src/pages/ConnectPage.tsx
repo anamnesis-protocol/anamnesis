@@ -73,9 +73,9 @@ export default function ConnectPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token_id: pendingTokenId }),
         })
-        if (!res.ok) throw new Error((await res.json()).detail ?? 'Demo sign failed')
         const data = await res.json()
-        setWalletSigHex(data.wallet_signature_hex)
+        if (!res.ok) throw new Error(data.detail ?? 'Demo sign failed')
+        setWalletSigHex(data.signature_hex)
       } catch (e: unknown) {
         err(e instanceof Error ? e.message : String(e))
       } finally {
@@ -101,7 +101,7 @@ export default function ConnectPage() {
       openSession({
         sessionId: session.session_id,
         tokenId: session.token_id,
-        sections: session.vault_sections,
+        sections: session.context_sections ?? {},
         expiresAt: session.expires_at,
       })
     } catch (e: unknown) {
@@ -120,7 +120,7 @@ export default function ConnectPage() {
 
           {/* Hero */}
           <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold text-slate-100">Your AI Harness</h1>
+            <h1 className="text-3xl font-bold text-slate-100">Train your own AI</h1>
             <p className="text-slate-400 text-sm">
               Encrypted directives. Owned by you. Works with any AI model.
             </p>
@@ -137,7 +137,7 @@ export default function ConnectPage() {
                     : 'bg-surface-card text-slate-400 hover:text-slate-200'
                 }`}
               >
-                I have a vault
+                I have a companion
               </button>
               <button
                 onClick={() => setMode('new')}
@@ -147,7 +147,7 @@ export default function ConnectPage() {
                     : 'bg-surface-card text-slate-400 hover:text-slate-200'
                 }`}
               >
-                New to Sovereign AI Context
+                New to Arty Fitchels
               </button>
             </div>
           )}
@@ -158,7 +158,7 @@ export default function ConnectPage() {
             {step === 'form' && mode === 'returning' && (
               <>
                 <div>
-                  <label className="block text-xs text-slate-400 mb-1">Context Token ID</label>
+                  <label className="block text-xs text-slate-400 mb-1">Companion ID</label>
                   <input
                     className="input"
                     placeholder="0.0.12345"
@@ -168,7 +168,7 @@ export default function ConnectPage() {
                   />
                 </div>
                 <button onClick={handleReturnStart} disabled={loading} className="btn-primary w-full">
-                  {loading ? 'Connecting…' : 'Connect to Vault'}
+                  {loading ? 'Connecting…' : 'Connect to Companion'}
                 </button>
               </>
             )}
@@ -195,7 +195,7 @@ export default function ConnectPage() {
                   />
                 </div>
                 <button onClick={handleNewStart} disabled={loading} className="btn-primary w-full">
-                  {loading ? 'Creating vault…' : 'Mint My Harness'}
+                  {loading ? 'Creating companion…' : 'Meet Your AI'}
                 </button>
               </>
             )}
@@ -204,7 +204,7 @@ export default function ConnectPage() {
             {step === 'sign' && (
               <div className="space-y-4">
                 <div>
-                  <div className="text-xs text-slate-400 mb-1">Token ID</div>
+                  <div className="text-xs text-slate-400 mb-1">Companion ID</div>
                   <div className="mono text-sm text-brand">{pendingTokenId}</div>
                 </div>
                 <div>
@@ -242,8 +242,8 @@ export default function ConnectPage() {
                     {loading
                       ? 'Opening…'
                       : mode === 'new'
-                      ? 'Secure & Open'
-                      : 'Open Vault'}
+                      ? 'Connect'
+                      : 'Open Companion'}
                   </button>
                 </div>
 
