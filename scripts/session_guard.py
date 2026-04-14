@@ -45,7 +45,7 @@ if os.environ.get("SOVEREIGN_ENV") == "testnet":
     load_dotenv(Path(__file__).parent.parent / ".env.testnet", override=True)
     # Drake vault mappings — must be set before vault.py reads them at import time
     os.environ.setdefault("VAULT_ROOT", "D:/symbiote_suit")
-    os.environ.setdefault("CONTEXT_TOKEN_ID", "0.0.8252163")
+    os.environ.setdefault("COMPANION_TOKEN_ID", "0.0.8252163")
     os.environ.setdefault(
         "VAULT_SECTIONS_JSON",
         _json.dumps(
@@ -63,7 +63,7 @@ else:
 from src.vault import (
     VAULT_ROOT,
     VAULT_SECTIONS,
-    CONTEXT_TOKEN_ID,
+    COMPANION_TOKEN_ID,
     pull_all,
 )
 from src.event_log import log_event
@@ -119,7 +119,7 @@ def save_start_hashes(local_hashes: dict[str, str]) -> None:
     """
     data: dict = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "token_id": CONTEXT_TOKEN_ID,
+        "token_id": COMPANION_TOKEN_ID,
         "hashes": local_hashes,
     }
     canonical = json.dumps(data, sort_keys=True, separators=(",", ":"))
@@ -160,7 +160,7 @@ def run(force: bool = False) -> None:
         return
 
     print("\n[session-guard] Session boundary check starting...")
-    print(f" Token: {CONTEXT_TOKEN_ID}")
+    print(f" Token: {COMPANION_TOKEN_ID}")
     print(f" Vault: {VAULT_ROOT}")
 
     # 1. Local hashes — what the AI will work with this session
@@ -182,7 +182,7 @@ def run(force: bool = False) -> None:
         log_event(
             event_type="SESSION_STARTED",
             payload={
-                "token_id": CONTEXT_TOKEN_ID,
+                "token_id": COMPANION_TOKEN_ID,
                 "local_hashes": local,
                 "hfs_match": False,
                 "integrity_failure": True,
@@ -217,7 +217,7 @@ def run(force: bool = False) -> None:
     log_event(
         event_type="SESSION_STARTED",
         payload={
-            "token_id": CONTEXT_TOKEN_ID,
+            "token_id": COMPANION_TOKEN_ID,
             "local_hashes": local,
             "hfs_match": len(mismatches) == 0,
             "mismatch_sections": [m[0] for m in mismatches],

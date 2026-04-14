@@ -19,7 +19,7 @@ python scripts/vault_push.py --section soul # push one section only
 python scripts/vault_push.py --dry-run # show what would be pushed
 
 Requirements:
-.env must contain: OPERATOR_ID, OPERATOR_KEY, CONTEXT_TOKEN_ID, VALIDATOR_CONTRACT_ID
+.env must contain: OPERATOR_ID, OPERATOR_KEY, COMPANION_TOKEN_ID, VALIDATOR_CONTRACT_ID
 """
 
 import argparse
@@ -38,7 +38,7 @@ if os.environ.get("SOVEREIGN_ENV") == "testnet":
     load_dotenv(Path(__file__).parent.parent / ".env.testnet", override=True)
     # Drake vault mappings — must be set before vault.py reads them at import time
     os.environ.setdefault("VAULT_ROOT", "D:/symbiote_suit")
-    os.environ.setdefault("CONTEXT_TOKEN_ID", "0.0.8252163")
+    os.environ.setdefault("COMPANION_TOKEN_ID", "0.0.8252163")
     os.environ.setdefault(
         "VAULT_SECTIONS_JSON",
         _json.dumps(
@@ -58,7 +58,7 @@ from src.vault import (
     VAULT_SECTIONS,
     VAULT_DIRS,
     VAULT_DIR_OPTIONS,
-    CONTEXT_TOKEN_ID,
+    COMPANION_TOKEN_ID,
     push_all,
     push_section,
     get_vault_key,
@@ -78,7 +78,7 @@ def dry_run() -> None:
     """Show what would be pushed without doing anything."""
     print("\n[DRY RUN] Vault push preview:")
     print(f" Vault root: {VAULT_ROOT}")
-    print(f" Context token: {CONTEXT_TOKEN_ID}")
+    print(f" Context token: {COMPANION_TOKEN_ID}")
 
     print(f"\n Identity sections ({len(VAULT_SECTIONS)}):")
     for section_name, rel_path in VAULT_SECTIONS.items():
@@ -117,7 +117,7 @@ def push_single_section(section_name: str) -> None:
         print(f"Unknown section '{section_name}'. Valid: {list(VAULT_SECTIONS.keys())}")
         sys.exit(1)
 
-    token_id = CONTEXT_TOKEN_ID
+    token_id = COMPANION_TOKEN_ID
     key = get_vault_key(token_id)
     local = load_local_index()
     existing_section_ids = local.get("sections", {})
@@ -157,7 +157,7 @@ def _log_session_ended() -> None:
         log_event(
             event_type="SESSION_ENDED",
             payload={
-                "token_id": CONTEXT_TOKEN_ID,
+                "token_id": COMPANION_TOKEN_ID,
                 "delta_available": False,
             },
         )
@@ -175,7 +175,7 @@ def _log_session_ended() -> None:
     log_event(
         event_type="SESSION_ENDED",
         payload={
-            "token_id": CONTEXT_TOKEN_ID,
+            "token_id": COMPANION_TOKEN_ID,
             "session_opened_at": start_data.get("timestamp"),
             "delta_available": True,
             "changed_sections": changed,
@@ -240,7 +240,7 @@ python scripts/vault_push.py --dry-run # show what would be pushed
     print("\n" + "=" * 60)
     print(" PUSH SUMMARY")
     print("=" * 60)
-    print(f" Context token: {CONTEXT_TOKEN_ID}")
+    print(f" Context token: {COMPANION_TOKEN_ID}")
     print(f" Index file: {result.get('index', 'n/a')}")
     print(f"\n Identity sections:")
     for section_name in VAULT_SECTIONS:

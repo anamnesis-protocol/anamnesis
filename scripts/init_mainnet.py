@@ -75,7 +75,7 @@ def reload_env() -> None:
                         print(f"[ERROR] {required} not set in .env")
                         sys.exit(1)
 
-                        id_fields = ("HCS_TOPIC_ID", "CONTEXT_TOKEN_ID", "VALIDATOR_CONTRACT_ID")
+                        id_fields = ("HCS_TOPIC_ID", "COMPANION_TOKEN_ID", "VALIDATOR_CONTRACT_ID")
                         already_set = {
                             k: os.getenv(k, "").strip().strip("'\"")
                             for k in id_fields
@@ -171,7 +171,7 @@ def reload_env() -> None:
                         token_id = mint_CONTEXT_TOKEN(
                             context_file_id=genesis_file_id, companion_name="Assistant"
                         )
-                        write_env("CONTEXT_TOKEN_ID", token_id)
+                        write_env("COMPANION_TOKEN_ID", token_id)
                         print(f" Context token: {token_id}\n")
                         return token_id
 
@@ -258,7 +258,7 @@ def reload_env() -> None:
                                             get_registered_file_id,
                                         )
 
-                                        CONTEXT_TOKEN_id = os.environ["CONTEXT_TOKEN_ID"]
+                                        CONTEXT_TOKEN_id = os.environ["COMPANION_TOKEN_ID"]
                                         token_evm = token_id_to_evm_address(CONTEXT_TOKEN_id)
 
                                         register_file(
@@ -347,7 +347,7 @@ def reload_env() -> None:
 
                                                     # Step 3
                                                     token_id = (
-                                                        os.getenv("CONTEXT_TOKEN_ID", "")
+                                                        os.getenv("COMPANION_TOKEN_ID", "")
                                                         .strip()
                                                         .strip("'\"")
                                                     )

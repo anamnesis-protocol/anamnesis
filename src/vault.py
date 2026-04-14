@@ -85,7 +85,7 @@ _DIR_BUNDLE_EXTENSIONS: tuple[str, ...] = (".md",)
 VAULT_INDEX_CACHE = Path(__file__).parent.parent / ".vault_index.json"
 
 # Context token — must be set via env var; no Drake default
-CONTEXT_TOKEN_ID = os.environ.get("CONTEXT_TOKEN_ID", "")
+COMPANION_TOKEN_ID = os.environ.get("COMPANION_TOKEN_ID", "")
 CONTEXT_TOKEN_SERIAL = 1
 
 # ---------------------------------------------------------------------------
@@ -633,7 +633,7 @@ def push_all(force_new: bool = False) -> dict[str, str]:
     Phase 2 — Directory bundles (section_key, dir: prefix)
     Index (index_key): Encrypted JSON mapping all section names to HFS file IDs.
     """
-    token_id = CONTEXT_TOKEN_ID
+    token_id = COMPANION_TOKEN_ID
     print(f"\n[vault] Deriving purpose-separated keys for context token {token_id}...")
     section_key = get_section_key(token_id)
     index_key = get_index_key(token_id)
@@ -800,7 +800,7 @@ def pull_all(output_dir: Path | None = None) -> dict[str, bytes]:
     Each section is individually integrity-verified (injection scan).
     Individual VAULT_SECTION_ACCESSED events emitted to HCS per section.
     """
-    token_id = CONTEXT_TOKEN_ID
+    token_id = COMPANION_TOKEN_ID
     print(f"\n[vault] Deriving purpose-separated keys for context token {token_id}...")
     section_key = get_section_key(token_id)
     index_key = get_index_key(token_id)

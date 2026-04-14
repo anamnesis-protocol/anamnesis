@@ -15,7 +15,7 @@ Endpoints:
  GET /docs — Interactive API docs (Swagger UI)
 
 Requirements:
- .env must contain: OPERATOR_ID, OPERATOR_KEY, CONTEXT_TOKEN_ID (as fallback), VALIDATOR_CONTRACT_ID
+ .env must contain: OPERATOR_ID, OPERATOR_KEY, COMPANION_TOKEN_ID (as fallback), VALIDATOR_CONTRACT_ID
 """
 
 import sys

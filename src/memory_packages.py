@@ -55,7 +55,7 @@ from src.vault import (
     _make_index_aad,
     load_local_index,
     save_local_index,
-    CONTEXT_TOKEN_ID,
+    COMPANION_TOKEN_ID,
     verify_content,
 )
 from src.event_log import log_event
@@ -439,7 +439,7 @@ def push_all_packages(
     Returns:
         HFS file_id of the package index
     """
-    token_id = CONTEXT_TOKEN_ID
+    token_id = COMPANION_TOKEN_ID
     package_key = get_package_key(token_id)
     index_key = get_index_key(token_id)
     local = load_local_index()

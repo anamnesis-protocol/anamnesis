@@ -34,7 +34,7 @@ from src.memory_packages import (
     pull_packages_parallel,
     query_packages,
 )
-from src.vault import get_package_key, load_local_index, CONTEXT_TOKEN_ID
+from src.vault import get_package_key, load_local_index, COMPANION_TOKEN_ID
 
 
 def get_package_index_file_id() -> str:
@@ -118,7 +118,7 @@ Examples:
         parser.print_help()
         sys.exit(0)
 
-    token_id = CONTEXT_TOKEN_ID
+    token_id = COMPANION_TOKEN_ID
     key = get_package_key(token_id)
 
     print(f"\n[query] Loading package index from HFS...")

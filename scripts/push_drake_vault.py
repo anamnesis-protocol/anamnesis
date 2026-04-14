@@ -72,7 +72,7 @@ def main():
     import json
 
     os.environ["VAULT_ROOT"] = str(DRAKE_VAULT)
-    os.environ["CONTEXT_TOKEN_ID"] = TOKEN_ID
+    os.environ["COMPANION_TOKEN_ID"] = TOKEN_ID
     os.environ["VAULT_SECTIONS_JSON"] = json.dumps(
         {name: str(path.relative_to(DRAKE_VAULT)) for name, path in SECTION_MAP.items()}
     )
