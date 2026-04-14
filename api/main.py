@@ -55,6 +55,9 @@ from api.routes.chat import router as chat_router
 from api.routes.user_keys import router as user_keys_router
 from api.routes.vault import router as vault_router
 from api.routes.skills import router as skills_router
+from api.routes.pass_store import router as pass_router
+from api.routes.drive_store import router as drive_router
+from api.routes.mail_store import router as mail_router
 
 app = FastAPI(
     title="Sovereign AI Context API",
@@ -92,6 +95,9 @@ app.include_router(chat_router)
 app.include_router(user_keys_router)
 app.include_router(vault_router)
 app.include_router(skills_router)
+app.include_router(pass_router)
+app.include_router(drive_router)
+app.include_router(mail_router)
 
 # Demo router (server-side signing, no wallet) — always registered.
 # /demo/sign and /demo/status require operator key; returns 503 if not configured.
