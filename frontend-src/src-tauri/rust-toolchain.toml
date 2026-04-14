@@ -1,4 +1,5 @@
 [toolchain]
-# Local Windows dev: GNU toolchain (no MSVC required)
-# CI overrides this per-platform via the workflow matrix
-channel = "stable-x86_64-pc-windows-gnu"
+# Use plain "stable" so CI works on all platforms.
+# Local Windows dev: install the GNU target separately if needed:
+#   rustup target add x86_64-pc-windows-gnu
+channel = "stable"
