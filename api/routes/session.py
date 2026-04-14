@@ -67,6 +67,7 @@ router = APIRouter(prefix="/session", tags=["session"])
 # /session/challenge
 # ---------------------------------------------------------------------------
 
+
 @router.post("/challenge", response_model=ChallengeResponse)
 def get_challenge(req: ChallengeRequest) -> ChallengeResponse:
     """
@@ -87,12 +88,13 @@ def get_challenge(req: ChallengeRequest) -> ChallengeResponse:
 # /session/open
 # ---------------------------------------------------------------------------
 
+
 @router.post("/open", response_model=SessionOpenResponse)
 @limiter.limit("10/minute")
 def open_session(
-        request: Request,
-        req: SessionOpenRequest,
-        authorization: str = Header(default=""),
+    request: Request,
+    req: SessionOpenRequest,
+    authorization: str = Header(default=""),
 ) -> SessionOpenResponse:
     """
     Open a sovereign AI session.
@@ -126,7 +128,7 @@ def open_session(
             )
             user_id = payload.get("sub", "")
         except Exception:
-            pass # invalid/expired token → continue as demo mode
+            pass  # invalid/expired token → continue as demo mode
 
     # ---- Reject concurrent open for the same vault (409 if active session exists) ----
     existing_holder = get_lock_holder(token_id)
@@ -136,10 +138,24 @@ def open_session(
         # leaving orphaned sessions. Silently evict rather than forcing the user to retry.
         close_session(existing_holder)
 
-    # ---- Derive IKM from passphrase ----
-    if not req.passphrase or len(req.passphrase) < 8:
-        raise HTTPException(status_code=400, detail="Passphrase must be at least 8 characters.")
-    ikm = hashlib.sha256(req.passphrase.encode("utf-8")).digest()
+    # ---- Derive IKM from passphrase or passkey PRF output ----
+    if req.auth_method == "passkey":
+        if not req.prf_output:
+            raise HTTPException(status_code=400, detail="prf_output required for passkey auth.")
+        import base64
+
+        try:
+            ikm = base64.urlsafe_b64decode(req.prf_output + "==")
+            if len(ikm) < 16:
+                raise ValueError("PRF output too short")
+        except Exception:
+            raise HTTPException(
+                status_code=400, detail="Invalid prf_output — must be base64url-encoded bytes."
+            )
+    else:
+        if not req.passphrase or len(req.passphrase) < 8:
+            raise HTTPException(status_code=400, detail="Passphrase must be at least 8 characters.")
+        ikm = hashlib.sha256(req.passphrase.encode("utf-8")).digest()
 
     # ---- Derive purpose-separated keys (Claim 14 + Element H) ----
     try:
@@ -188,11 +204,7 @@ def open_session(
     stored_hashes: dict[str, str] = section_ids.get("_section_hashes", {})
 
     # ---- Filter to identity sections only (no dir bundles or metadata in session context) ----
-    identity_ids = {
-        name: fid
-        for name, fid in section_ids.items()
-        if name in _IDENTITY_SECTIONS
-    }
+    identity_ids = {name: fid for name, fid in section_ids.items() if name in _IDENTITY_SECTIONS}
 
     if not identity_ids:
         raise HTTPException(
@@ -216,10 +228,7 @@ def open_session(
         )
 
     with ThreadPoolExecutor(max_workers=len(identity_ids)) as pool:
-        futures = {
-            pool.submit(_pull, name, fid): name
-            for name, fid in identity_ids.items()
-        }
+        futures = {pool.submit(_pull, name, fid): name for name, fid in identity_ids.items()}
         for future in as_completed(futures):
             section_name = futures[future]
             try:
@@ -273,6 +282,7 @@ def open_session(
     try:
         from rank_bm25 import BM25Okapi
         from api.services.rag import chunk_sections, VaultIndex, _tokenize
+
         chunks = chunk_sections(session.context_sections)
         if chunks:
             corpus = [_tokenize(c.text) for c in chunks]
@@ -287,8 +297,7 @@ def open_session(
     # and content hash check. INTEGRITY_FAILURE events are logged separately if any
     # section fails — so the HCS record is complete for both success and attack paths.
     start_hashes = {
-        name: hashlib.sha256(content).hexdigest()
-        for name, content in context_raw.items()
+        name: hashlib.sha256(content).hexdigest() for name, content in context_raw.items()
     }
     try:
         log_event(
@@ -305,7 +314,7 @@ def open_session(
         )
         hcs_open = True
     except Exception:
-        hcs_open = False # Non-fatal — session still opens
+        hcs_open = False  # Non-fatal — session still opens
 
     # ---- Deliver context as strings (key already discarded at function exit) ----
     return SessionOpenResponse(
@@ -321,6 +330,7 @@ def open_session(
 # ---------------------------------------------------------------------------
 # /session/close
 # ---------------------------------------------------------------------------
+
 
 @router.post("/close", response_model=SessionCloseResponse)
 def close_session_endpoint(req: SessionCloseRequest) -> SessionCloseResponse:
@@ -388,14 +398,15 @@ def close_session_endpoint(req: SessionCloseRequest) -> SessionCloseResponse:
             # ---- Update vault index with new content hashes ----
             # Carry forward unchanged section hashes, replace changed ones.
             stored = session.full_section_ids.get("_section_hashes", {})
-            new_hashes = dict(session.start_hashes) # hashes at open (unchanged sections)
+            new_hashes = dict(session.start_hashes)  # hashes at open (unchanged sections)
             for name, content in changed.items():
                 new_hashes[name] = hashlib.sha256(content).hexdigest()
 
             # Build clean index (no metadata keys)
             _META_KEYS = {"_section_hashes"}
             clean_index = {
-                k: v for k, v in session.full_section_ids.items()
+                k: v
+                for k, v in session.full_section_ids.items()
                 if k not in _META_KEYS and isinstance(v, str)
             }
 
@@ -411,7 +422,7 @@ def close_session_endpoint(req: SessionCloseRequest) -> SessionCloseResponse:
         except Exception as exc:
             # Non-fatal for session eviction — still zero keys and close.
             # Caller should retry close or handle the error.
-            close_session(req.session_id) # zeros keys even on error
+            close_session(req.session_id)  # zeros keys even on error
             raise HTTPException(
                 status_code=502,
                 detail=f"Failed to push updated sections to Hedera: {exc}. "
@@ -429,13 +440,16 @@ def close_session_endpoint(req: SessionCloseRequest) -> SessionCloseResponse:
         session.last_model
         and "session_state" not in changed
         and "session_state" in session.sections_loaded
-        and session.context_sections # context still available (not yet zeroed)
+        and session.context_sections  # context still available (not yet zeroed)
     ):
         try:
             from api.services.ai_router import generate_completion, MODELS, available_models
-            if available_models(): # only if at least one model is configured
+
+            if available_models():  # only if at least one model is configured
                 existing_state = session.context_sections.get("session_state", "")
-                model_display = MODELS.get(session.last_model, {}).get("display", session.last_model)
+                model_display = MODELS.get(session.last_model, {}).get(
+                    "display", session.last_model
+                )
                 summary_system = (
                     "You are a memory system for a sovereign AI companion. "
                     "Your task is to write a concise session_state update (3-5 bullets, max 200 words). "
@@ -448,6 +462,7 @@ def close_session_endpoint(req: SessionCloseRequest) -> SessionCloseResponse:
                     "and appends a brief note about this session."
                 )
                 import asyncio
+
                 new_state = asyncio.run(
                     generate_completion(session.last_model, summary_system, summary_prompt)
                 )
@@ -462,19 +477,35 @@ def close_session_endpoint(req: SessionCloseRequest) -> SessionCloseResponse:
                             index_key_bytes = bytes(session.index_key)
                         try:
                             existing_file_id = session.full_section_ids.get("session_state")
-                            push_section("session_state", new_state_bytes, section_key_bytes, token_id, existing_file_id)
+                            push_section(
+                                "session_state",
+                                new_state_bytes,
+                                section_key_bytes,
+                                token_id,
+                                existing_file_id,
+                            )
                             new_hashes = dict(session.start_hashes)
                             new_hashes["session_state"] = new_hash
                             _META_KEYS = {"_section_hashes"}
-                            clean_index = {k: v for k, v in session.full_section_ids.items() if k not in _META_KEYS and isinstance(v, str)}
-                            update_index(index_file_id=session.index_file_id, index=clean_index, key=index_key_bytes, token_id=token_id, section_hashes=new_hashes)
+                            clean_index = {
+                                k: v
+                                for k, v in session.full_section_ids.items()
+                                if k not in _META_KEYS and isinstance(v, str)
+                            }
+                            update_index(
+                                index_file_id=session.index_file_id,
+                                index=clean_index,
+                                key=index_key_bytes,
+                                token_id=token_id,
+                                section_hashes=new_hashes,
+                            )
                             changed["session_state"] = new_state_bytes
                             vault_updated = True
                         finally:
                             section_key_bytes = b"\x00" * len(section_key_bytes)
                             index_key_bytes = b"\x00" * len(index_key_bytes)
         except Exception:
-            pass # Non-fatal — session still closes without session_state update
+            pass  # Non-fatal — session still closes without session_state update
 
     # ---- Log SESSION_ENDED to HCS (Element J — audit trail) ----
     hcs_logged = False
@@ -497,7 +528,7 @@ def close_session_endpoint(req: SessionCloseRequest) -> SessionCloseResponse:
         )
         hcs_logged = True
     except Exception:
-        pass # Non-fatal — session still closes
+        pass  # Non-fatal — session still closes
 
     # ---- Zero keys + evict session ----
     # close_session() overwrites section_key and index_key bytearrays with zeros
@@ -517,10 +548,12 @@ def close_session_endpoint(req: SessionCloseRequest) -> SessionCloseResponse:
 # Health / status
 # ---------------------------------------------------------------------------
 
+
 @router.get("/status")
 def session_status():
     """Return API health and active session count."""
     from api.session_store import active_count
+
     return {
         "status": "ok",
         "active_sessions": active_count(),

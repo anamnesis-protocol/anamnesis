@@ -15,177 +15,195 @@ from pydantic import BaseModel, Field
 
 
 class ChallengeRequest(BaseModel):
- token_id: str = Field(
- description="Context token ID (e.g. '0.0.10376966'). Must have a registered vault index."
- )
+    token_id: str = Field(
+        description="Context token ID (e.g. '0.0.10376966'). Must have a registered vault index."
+    )
 
 
 class ChallengeResponse(BaseModel):
- token_id: str
- challenge_hex: str = Field(
- description="Hex-encoded bytes for the wallet to sign (Ed25519 or secp256k1)."
- )
+    token_id: str
+    challenge_hex: str = Field(
+        description="Hex-encoded bytes for the wallet to sign (Ed25519 or secp256k1)."
+    )
 
 
 class SessionOpenRequest(BaseModel):
- token_id: str = Field(
- description="Context token ID."
- )
- passphrase: str = Field(
- description=(
- "User passphrase. SHA-256 hashed, used as HKDF IKM to derive the vault decryption key. "
- "Must match the passphrase used at provision time."
- )
- )
- serial: int = Field(
- default=1,
- description="NFT serial number (default 1).",
- )
+    token_id: str = Field(description="Context token ID.")
+    passphrase: str | None = Field(
+        default=None,
+        description=(
+            "User passphrase. SHA-256 hashed, used as HKDF IKM. "
+            "Required when auth_method='passphrase'."
+        ),
+    )
+    prf_output: str | None = Field(
+        default=None,
+        description=(
+            "Base64url-encoded 32-byte PRF output from WebAuthn authenticator. "
+            "Used as HKDF IKM when auth_method='passkey'. "
+            "Derived from the authenticator using input 'artyfitchels-vault-{token_id}'."
+        ),
+    )
+    auth_method: str = Field(
+        default="passphrase",
+        description="'passphrase' or 'passkey'.",
+    )
+    serial: int = Field(default=1, description="NFT serial number (default 1).")
 
 
 class SessionOpenResponse(BaseModel):
- session_id: str = Field(description="UUID — pass to /session/close when session ends.")
- token_id: str
- context_sections: dict[str, str] = Field(
- description=(
- "Identity section content (soul, user, symbiote, session_state) as UTF-8 strings. "
- "Inject into your AI model's system prompt before the user turn."
- )
- )
- sections_loaded: list[str]
- created_at: str
- expires_at: str
+    session_id: str = Field(description="UUID — pass to /session/close when session ends.")
+    token_id: str
+    context_sections: dict[str, str] = Field(
+        description=(
+            "Identity section content (soul, user, symbiote, session_state) as UTF-8 strings. "
+            "Inject into your AI model's system prompt before the user turn."
+        )
+    )
+    sections_loaded: list[str]
+    created_at: str
+    expires_at: str
 
 
 class SessionCloseRequest(BaseModel):
- session_id: str = Field(description="Session UUID returned by /session/open.")
- updated_sections: dict[str, str] = Field(
- default_factory=dict,
- description=(
- "Updated vault section content to write back to Hedera. "
- "Keys are section names (e.g. 'soul', 'memory'). Values are UTF-8 strings. "
- "Only sections whose content differs from session-open hashes will be pushed. "
- "Omit a section to leave it unchanged. Empty dict = read-only session."
- ),
- )
+    session_id: str = Field(description="Session UUID returned by /session/open.")
+    updated_sections: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Updated vault section content to write back to Hedera. "
+            "Keys are section names (e.g. 'soul', 'memory'). Values are UTF-8 strings. "
+            "Only sections whose content differs from session-open hashes will be pushed. "
+            "Omit a section to leave it unchanged. Empty dict = read-only session."
+        ),
+    )
 
 
 class SessionCloseResponse(BaseModel):
- session_id: str
- closed_at: str
- changed_sections: list[str] = Field(
- description="Sections whose content changed and were pushed back to Hedera."
- )
- hcs_logged: bool = Field(description="True if SESSION_ENDED was logged to HCS.")
- vault_updated: bool = Field(
- description="True if any sections were re-encrypted and pushed to Hedera."
- )
+    session_id: str
+    closed_at: str
+    changed_sections: list[str] = Field(
+        description="Sections whose content changed and were pushed back to Hedera."
+    )
+    hcs_logged: bool = Field(description="True if SESSION_ENDED was logged to HCS.")
+    vault_updated: bool = Field(
+        description="True if any sections were re-encrypted and pushed to Hedera."
+    )
 
 
 class ErrorResponse(BaseModel):
- error: str
- detail: str = ""
+    error: str
+    detail: str = ""
 
 
 # ---------------------------------------------------------------------------
 # User provisioning models
 # ---------------------------------------------------------------------------
 
+
 class ProvisionStartRequest(BaseModel):
- account_id: str | None = Field(
- default=None,
- description="User's Hedera account ID (e.g. '0.0.12345'). "
- "If omitted, a new account is created automatically using the operator account.",
- )
- companion_name: str = Field(
- default="Assistant",
- description="Name for the AI companion (used in context token metadata and default vault content).",
- )
+    account_id: str | None = Field(
+        default=None,
+        description="User's Hedera account ID (e.g. '0.0.12345'). "
+        "If omitted, a new account is created automatically using the operator account.",
+    )
+    companion_name: str = Field(
+        default="Assistant",
+        description="Name for the AI companion (used in context token metadata and default vault content).",
+    )
 
 
 class ProvisionStartResponse(BaseModel):
- token_id: str = Field(description="Newly minted context token ID. Use this in /provision/complete.")
- account_id: str = Field(description="Hedera account ID associated with this companion (auto-created or provided).")
- challenge_hex: str = Field(
- description=(
- "Hex-encoded challenge bytes for the wallet to sign. "
- "This is the same challenge used by /session/open — "
- "once you complete provisioning, the same signature opens your first session."
- )
- )
- expires_at: str = Field(description="ISO timestamp — provisioning must be completed before this time.")
+    token_id: str = Field(
+        description="Newly minted context token ID. Use this in /provision/complete."
+    )
+    account_id: str = Field(
+        description="Hedera account ID associated with this companion (auto-created or provided)."
+    )
+    challenge_hex: str = Field(
+        description=(
+            "Hex-encoded challenge bytes for the wallet to sign. "
+            "This is the same challenge used by /session/open — "
+            "once you complete provisioning, the same signature opens your first session."
+        )
+    )
+    expires_at: str = Field(
+        description="ISO timestamp — provisioning must be completed before this time."
+    )
 
 
 class ProvisionCompleteRequest(BaseModel):
- token_id: str = Field(description="Context token ID returned by /provision/start.")
- passphrase: str = Field(
- description=(
- "User-chosen passphrase. SHA-256 hashed client-side, then used as HKDF IKM to derive "
- "the vault encryption key. Never stored — if lost, the vault cannot be decrypted."
- )
- )
+    token_id: str = Field(description="Context token ID returned by /provision/start.")
+    passphrase: str = Field(
+        description=(
+            "User-chosen passphrase. SHA-256 hashed client-side, then used as HKDF IKM to derive "
+            "the vault encryption key. Never stored — if lost, the vault cannot be decrypted."
+        )
+    )
 
 
 class ProvisionCompleteResponse(BaseModel):
- token_id: str
- sections_pushed: list[str]
- index_file_id: str
- vault_registered: bool
- message: str
+    token_id: str
+    sections_pushed: list[str]
+    index_file_id: str
+    vault_registered: bool
+    message: str
 
 
 class UserStatusResponse(BaseModel):
- token_id: str
- registered: bool
- index_file_id: str | None = None
- message: str
+    token_id: str
+    registered: bool
+    index_file_id: str | None = None
+    message: str
 
 
 # ---------------------------------------------------------------------------
 # Dir bundle models
 # ---------------------------------------------------------------------------
 
+
 class BundlePushRequest(BaseModel):
- session_id: str = Field(description="Active session UUID from /session/open.")
- bundle_name: str = Field(
- description=(
- "Bundle name — alphanumeric, hyphens, underscores, max 64 chars. "
- "Stored on HFS as 'dir:{bundle_name}'. "
- "Examples: 'sessions', 'projects', 'research-notes'."
- )
- )
- files: dict[str, str] = Field(
- description=(
- "Files to bundle: {relative_path: utf-8 content}. "
- "Example: {'2026-03-17-session.md': '# Session\\n...'}"
- )
- )
+    session_id: str = Field(description="Active session UUID from /session/open.")
+    bundle_name: str = Field(
+        description=(
+            "Bundle name — alphanumeric, hyphens, underscores, max 64 chars. "
+            "Stored on HFS as 'dir:{bundle_name}'. "
+            "Examples: 'sessions', 'projects', 'research-notes'."
+        )
+    )
+    files: dict[str, str] = Field(
+        description=(
+            "Files to bundle: {relative_path: utf-8 content}. "
+            "Example: {'2026-03-17-session.md': '# Session\\n...'}"
+        )
+    )
 
 
 class BundlePushResponse(BaseModel):
- bundle_name: str = Field(description="Bundle name as stored (without 'dir:' prefix).")
- file_id: str = Field(description="HFS file ID where the bundle is stored.")
- files_stored: int = Field(description="Number of files in the bundle.")
- hcs_logged: bool = Field(description="True if BUNDLE_PUSHED was logged to HCS.")
+    bundle_name: str = Field(description="Bundle name as stored (without 'dir:' prefix).")
+    file_id: str = Field(description="HFS file ID where the bundle is stored.")
+    files_stored: int = Field(description="Number of files in the bundle.")
+    hcs_logged: bool = Field(description="True if BUNDLE_PUSHED was logged to HCS.")
 
 
 class BundleListResponse(BaseModel):
- bundles: list[str] = Field(
- description="Names of dir bundles available in this vault (without 'dir:' prefix)."
- )
+    bundles: list[str] = Field(
+        description="Names of dir bundles available in this vault (without 'dir:' prefix)."
+    )
 
 
 class BundlePullResponse(BaseModel):
- bundle_name: str
- files: dict[str, str] = Field(
- description="Bundle contents: {relative_path: utf-8 content string}."
- )
+    bundle_name: str
+    files: dict[str, str] = Field(
+        description="Bundle contents: {relative_path: utf-8 content string}."
+    )
 
 
 class VaultDeleteRequest(BaseModel):
     token_id: str = Field(description="Hedera context token ID (e.g. '0.0.12345').")
     serial: int = Field(default=1, description="Token serial number.")
-    passphrase: str = Field(description="Vault passphrase — used to derive index key and read file IDs.")
+    passphrase: str = Field(
+        description="Vault passphrase — used to derive index key and read file IDs."
+    )
 
 
 class VaultDeleteResponse(BaseModel):
