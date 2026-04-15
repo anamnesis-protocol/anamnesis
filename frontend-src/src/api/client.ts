@@ -165,12 +165,21 @@ export const api = {
     challenge: (token_id: string) =>
       request<ChallengeResponse>('POST', '/session/challenge', { token_id }),
 
-    open: (token_id: string, wallet_signature_hex: string, serial = 1) =>
-      request<SessionOpenResponse>('POST', '/session/open', {
+    open: (
+      token_id: string,
+      auth: { passphrase: string } | { prf_output: string },
+      serial = 1
+    ) => {
+      const authPayload =
+        'passphrase' in auth
+          ? { auth_method: 'passphrase', passphrase: auth.passphrase }
+          : { auth_method: 'passkey', prf_output: auth.prf_output }
+      return request<SessionOpenResponse>('POST', '/session/open', {
         token_id,
-        wallet_signature_hex,
         serial,
-      }),
+        ...authPayload,
+      })
+    },
 
     close: (session_id: string, updated_sections: Record<string, string> = {}) =>
       request<SessionCloseResponse>('POST', '/session/close', {
@@ -216,12 +225,14 @@ export const api = {
       session_id: string,
       message: string,
       model: string,
-      history: Array<{ role: string; content: string }> = []
+      history: Array<{ role: string; content: unknown }> = [],
+      tools?: unknown[],
+      enable_tools: boolean = false
     ): Promise<Response> =>
       fetch(`${BASE}/chat/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id, message, model, history }),
+        body: JSON.stringify({ session_id, message, model, history, enable_tools }),
       }),
   },
 
