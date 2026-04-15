@@ -25,7 +25,9 @@ Environment variables (used only in demo/testnet mode):
 
 import json
 import os
-from typing import AsyncIterator
+from typing import AsyncIterator, Any
+
+from api.services.builtin_tools import get_tool_definitions
 
 # ---------------------------------------------------------------------------
 # Model registry
@@ -37,7 +39,7 @@ MODELS: dict[str, dict] = {
     # Listed first so it is the pre-selected model in the UI.
     "claude-sonnet-4-5": {
         "provider": "anthropic",
-        "display": "Claude Sonnet 4.5 ★", # ★ = platform default
+        "display": "Claude Sonnet 4.5 ★",  # ★ = platform default
         "env_key": "ANTHROPIC_API_KEY",
     },
     "claude-opus-4-6": {
@@ -179,9 +181,19 @@ _TASK_PROFILES: dict[str, dict] = {
     "vision": {
         "label": "Image / visual analysis",
         "keywords": [
-            "image", "screenshot", "photo", "picture", "diagram", "chart",
-            "visual", "what do you see", "look at this", "analyze this image",
-            "describe the image", "what's in this", "what is in the",
+            "image",
+            "screenshot",
+            "photo",
+            "picture",
+            "diagram",
+            "chart",
+            "visual",
+            "what do you see",
+            "look at this",
+            "analyze this image",
+            "describe the image",
+            "what's in this",
+            "what is in the",
         ],
         "preferred_models": [
             "gpt-4o",
@@ -195,17 +207,43 @@ _TASK_PROFILES: dict[str, dict] = {
             "This task cannot be completed with a text-only model."
         ),
     },
-
     # ── Code generation & debugging ────────────────────────────────────────
     "coding": {
         "label": "Code generation / debugging",
         "keywords": [
-            "code", "function", "debug", "error", "traceback", "exception",
-            "class", "implement", "refactor", "script", "algorithm",
-            "api endpoint", "sql", "python", "javascript", "typescript",
-            "java", "golang", "rust", "bash", "dockerfile", "kubernetes",
-            "unit test", "pytest", "jest", "regex", "compile", "runtime",
-            "syntax", "doesn't work", "why isn't", "fix this", "bug",
+            "code",
+            "function",
+            "debug",
+            "error",
+            "traceback",
+            "exception",
+            "class",
+            "implement",
+            "refactor",
+            "script",
+            "algorithm",
+            "api endpoint",
+            "sql",
+            "python",
+            "javascript",
+            "typescript",
+            "java",
+            "golang",
+            "rust",
+            "bash",
+            "dockerfile",
+            "kubernetes",
+            "unit test",
+            "pytest",
+            "jest",
+            "regex",
+            "compile",
+            "runtime",
+            "syntax",
+            "doesn't work",
+            "why isn't",
+            "fix this",
+            "bug",
         ],
         "preferred_models": [
             "gpt-4o",
@@ -216,16 +254,29 @@ _TASK_PROFILES: dict[str, dict] = {
         ],
         "hard_requirement": False,
     },
-
     # ── Deep reasoning / planning ──────────────────────────────────────────
     "reasoning": {
         "label": "Analysis / planning / strategy",
         "keywords": [
-            "analyze", "analysis", "plan", "strategy", "compare", "evaluate",
-            "architecture", "system design", "decision", "trade-off",
-            "pros and cons", "think through", "break down", "step by step",
-            "complex problem", "recommend an approach", "best way to",
-            "should i", "which option",
+            "analyze",
+            "analysis",
+            "plan",
+            "strategy",
+            "compare",
+            "evaluate",
+            "architecture",
+            "system design",
+            "decision",
+            "trade-off",
+            "pros and cons",
+            "think through",
+            "break down",
+            "step by step",
+            "complex problem",
+            "recommend an approach",
+            "best way to",
+            "should i",
+            "which option",
         ],
         "preferred_models": [
             "claude-3-opus-20240229",
@@ -236,15 +287,29 @@ _TASK_PROFILES: dict[str, dict] = {
         ],
         "hard_requirement": False,
     },
-
     # ── Creative writing ───────────────────────────────────────────────────
     "creative": {
         "label": "Creative writing",
         "keywords": [
-            "write a", "draft", "story", "poem", "poem", "essay", "blog post",
-            "email", "cover letter", "pitch", "marketing copy", "headline",
-            "rewrite", "make this sound", "persuasive", "narrative",
-            "creative", "engaging", "tone",
+            "write a",
+            "draft",
+            "story",
+            "poem",
+            "poem",
+            "essay",
+            "blog post",
+            "email",
+            "cover letter",
+            "pitch",
+            "marketing copy",
+            "headline",
+            "rewrite",
+            "make this sound",
+            "persuasive",
+            "narrative",
+            "creative",
+            "engaging",
+            "tone",
         ],
         "preferred_models": [
             "claude-3-5-sonnet-20241022",
@@ -254,15 +319,21 @@ _TASK_PROFILES: dict[str, dict] = {
         ],
         "hard_requirement": False,
     },
-
     # ── Long document / context ────────────────────────────────────────────
     "long_context": {
         "label": "Long document processing",
         "keywords": [
-            "entire document", "full file", "all of this", "long context",
-            "comprehensive analysis", "summarize this document",
-            "read through all", "entire codebase", "whole file",
-            "everything in this", "multiple files",
+            "entire document",
+            "full file",
+            "all of this",
+            "long context",
+            "comprehensive analysis",
+            "summarize this document",
+            "read through all",
+            "entire codebase",
+            "whole file",
+            "everything in this",
+            "multiple files",
         ],
         "preferred_models": [
             "gemini-1.5-pro",
@@ -272,14 +343,21 @@ _TASK_PROFILES: dict[str, dict] = {
         ],
         "hard_requirement": False,
     },
-
     # ── Fast / simple queries ──────────────────────────────────────────────
     "fast": {
         "label": "Quick / simple query",
         "keywords": [
-            "quick question", "briefly", "tldr", "tl;dr", "short answer",
-            "in one sentence", "what is the definition", "remind me",
-            "how do i install", "what's the syntax", "quick summary",
+            "quick question",
+            "briefly",
+            "tldr",
+            "tl;dr",
+            "short answer",
+            "in one sentence",
+            "what is the definition",
+            "remind me",
+            "how do i install",
+            "what's the syntax",
+            "quick summary",
         ],
         "preferred_models": [
             "gemini-1.5-flash",
@@ -290,15 +368,24 @@ _TASK_PROFILES: dict[str, dict] = {
         ],
         "hard_requirement": False,
     },
-
     # ── Confidential / private data ────────────────────────────────────────
     "privacy": {
         "label": "Confidential / private data",
         "keywords": [
-            "confidential", "sensitive data", "personal data", "pii",
-            "local only", "no cloud", "don't share this", "off the record",
-            "proprietary", "internal only", "private information",
-            "hipaa", "gdpr", "ferpa",
+            "confidential",
+            "sensitive data",
+            "personal data",
+            "pii",
+            "local only",
+            "no cloud",
+            "don't share this",
+            "off the record",
+            "proprietary",
+            "internal only",
+            "private information",
+            "hipaa",
+            "gdpr",
+            "ferpa",
         ],
         "preferred_models": [
             "ollama/llama3.2",
@@ -340,12 +427,14 @@ def available_models(user_api_keys: dict | None = None) -> list[dict]:
     for model_id, meta in MODELS.items():
         key = _resolve_api_key(meta["env_key"], meta["provider"], user_api_keys)
         if key:
-            result.append({
-                "id": model_id,
-                "display": meta["display"],
-                "provider": meta["provider"],
-                "available": True,
-            })
+            result.append(
+                {
+                    "id": model_id,
+                    "display": meta["display"],
+                    "provider": meta["provider"],
+                    "available": True,
+                }
+            )
     return result
 
 
@@ -368,6 +457,7 @@ def get_model_meta(model_id: str, user_api_keys: dict | None = None) -> dict:
 # ---------------------------------------------------------------------------
 # Model recommendation
 # ---------------------------------------------------------------------------
+
 
 def recommend_model(
     message: str,
@@ -411,7 +501,9 @@ def recommend_model(
             "task_type": "general",
             "task_label": "General conversation",
             "recommended_model_id": current_model_id,
-            "recommended_model_display": MODELS.get(current_model_id, {}).get("display", current_model_id),
+            "recommended_model_display": MODELS.get(current_model_id, {}).get(
+                "display", current_model_id
+            ),
             "current_model_id": current_model_id,
             "current_is_optimal": True,
             "hard_requirement": False,
@@ -423,9 +515,7 @@ def recommend_model(
     hard_req: bool = matched_profile.get("hard_requirement", False)
 
     # ── Best configured model in priority order ───────────────────────────
-    best_configured: str | None = next(
-        (m for m in preferred if m in configured_ids), None
-    )
+    best_configured: str | None = next((m for m in preferred if m in configured_ids), None)
 
     # ── Hard requirement, no capable model configured → cannot complete ───
     if hard_req and best_configured is None:
@@ -476,12 +566,12 @@ def recommend_model(
         ]
 
     # ── Is current model already optimal? ────────────────────────────────
-    current_rank = preferred.index(current_model_id) if current_model_id in preferred else len(preferred)
+    current_rank = (
+        preferred.index(current_model_id) if current_model_id in preferred else len(preferred)
+    )
     best_rank = preferred.index(best_configured) if best_configured else len(preferred)
     current_is_optimal = (
-        best_configured is None
-        or best_configured == current_model_id
-        or current_rank <= best_rank
+        best_configured is None or best_configured == current_model_id or current_rank <= best_rank
     )
 
     recommended_id = best_configured or current_model_id
@@ -505,14 +595,23 @@ def recommend_model(
 # SSE helpers
 # ---------------------------------------------------------------------------
 
-def _sse(content: str, done: bool = False) -> str:
+
+def _sse(
+    content: str = "", done: bool = False, event_type: str = "message", data: dict | None = None
+) -> str:
     """Format a single SSE data frame."""
-    return f"data: {json.dumps({'content': content, 'done': done})}\n\n"
+    if data:
+        # Custom event with full data payload
+        return f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
+    else:
+        # Standard message event
+        return f"data: {json.dumps({'content': content, 'done': done})}\n\n"
 
 
 # ---------------------------------------------------------------------------
 # Provider: OpenAI
 # ---------------------------------------------------------------------------
+
 
 async def _stream_openai(
     model_id: str,
@@ -553,12 +652,14 @@ async def _stream_openai(
 # Provider: Anthropic
 # ---------------------------------------------------------------------------
 
+
 async def _stream_anthropic(
     model_id: str,
     system_prompt: str,
     history: list[dict],
     message: str,
     user_api_keys: dict | None = None,
+    tools: list[dict] | None = None,
 ) -> AsyncIterator[str]:
     try:
         import anthropic
@@ -566,20 +667,62 @@ async def _stream_anthropic(
         yield _sse("[ERROR] anthropic package not installed. Run: pip install anthropic", done=True)
         return
 
-    client = anthropic.AsyncAnthropic(api_key=_resolve_api_key("ANTHROPIC_API_KEY", "anthropic", user_api_keys))
+    client = anthropic.AsyncAnthropic(
+        api_key=_resolve_api_key("ANTHROPIC_API_KEY", "anthropic", user_api_keys)
+    )
 
     messages = list(history)
     messages.append({"role": "user", "content": message})
 
     try:
-        async with client.messages.stream(
-            model=model_id,
-            system=system_prompt,
-            messages=messages,
-            max_tokens=2048,
-        ) as stream:
-            async for text in stream.text_stream:
-                yield _sse(text)
+        # Build request params
+        params: dict[str, Any] = {
+            "model": model_id,
+            "system": system_prompt,
+            "messages": messages,
+            "max_tokens": 2048,
+        }
+
+        # Add tools if provided
+        if tools:
+            params["tools"] = tools
+
+        async with client.messages.stream(**params) as stream:
+            async for event in stream:
+                # Handle different event types
+                if event.type == "content_block_start":
+                    block = event.content_block
+                    if block.type == "tool_use":
+                        # Emit tool_use event to frontend
+                        yield _sse(
+                            event_type="tool_use",
+                            data={
+                                "tool_use_id": block.id,
+                                "tool_name": block.name,
+                                "tool_input": block.input,
+                            },
+                        )
+                elif event.type == "content_block_delta":
+                    delta = event.delta
+                    if delta.type == "text_delta":
+                        # Stream text content
+                        yield _sse(delta.text)
+                    elif delta.type == "input_json_delta":
+                        # Tool input is being streamed (we already sent tool_use event)
+                        pass
+                elif event.type == "message_stop":
+                    # Check if we need to wait for tool results
+                    final_message = await stream.get_final_message()
+                    if final_message.stop_reason == "tool_use":
+                        # Don't mark as done - frontend will send tool results
+                        yield _sse(
+                            event_type="tool_use_complete", data={"waiting_for_results": True}
+                        )
+                    else:
+                        # Normal completion
+                        yield _sse("", done=True)
+
+        # If we exited without tool_use, mark as done
         yield _sse("", done=True)
     except Exception as exc:
         yield _sse(f"[ERROR] Anthropic: {exc}", done=True)
@@ -588,6 +731,7 @@ async def _stream_anthropic(
 # ---------------------------------------------------------------------------
 # Provider: Google (Gemini)
 # ---------------------------------------------------------------------------
+
 
 async def _stream_google(
     model_id: str,
@@ -599,7 +743,10 @@ async def _stream_google(
     try:
         import google.generativeai as genai
     except ImportError:
-        yield _sse("[ERROR] google-generativeai package not installed. Run: pip install google-generativeai", done=True)
+        yield _sse(
+            "[ERROR] google-generativeai package not installed. Run: pip install google-generativeai",
+            done=True,
+        )
         return
 
     genai.configure(api_key=_resolve_api_key("GOOGLE_API_KEY", "google", user_api_keys))
@@ -627,6 +774,7 @@ async def _stream_google(
 # ---------------------------------------------------------------------------
 # Provider: Mistral (OpenAI-compatible API — no extra package needed)
 # ---------------------------------------------------------------------------
+
 
 async def _stream_mistral(
     model_id: str,
@@ -668,6 +816,7 @@ async def _stream_mistral(
 # Provider: Groq (OpenAI-compatible API — no extra package needed)
 # ---------------------------------------------------------------------------
 
+
 async def _stream_groq(
     model_id: str,
     system_prompt: str,
@@ -708,6 +857,7 @@ async def _stream_groq(
 # Provider: OpenRouter (OpenAI-compatible gateway — 100+ models)
 # ---------------------------------------------------------------------------
 
+
 async def _stream_openrouter(
     model_id: str,
     system_prompt: str,
@@ -729,7 +879,9 @@ async def _stream_openrouter(
     )
 
     # Strip "openrouter/" namespace prefix before calling the API
-    actual_model = model_id[len("openrouter/"):] if model_id.startswith("openrouter/") else model_id
+    actual_model = (
+        model_id[len("openrouter/") :] if model_id.startswith("openrouter/") else model_id
+    )
 
     messages = [{"role": "system", "content": system_prompt}]
     messages += history
@@ -754,6 +906,7 @@ async def _stream_openrouter(
 # ---------------------------------------------------------------------------
 # Provider: xAI / Grok (OpenAI-compatible API)
 # ---------------------------------------------------------------------------
+
 
 async def _stream_xai(
     model_id: str,
@@ -795,6 +948,7 @@ async def _stream_xai(
 # Provider: Ollama (local server — OpenAI-compatible, zero data egress)
 # ---------------------------------------------------------------------------
 
+
 async def _stream_ollama(
     model_id: str,
     system_prompt: str,
@@ -818,13 +972,15 @@ async def _stream_ollama(
         yield _sse("[ERROR] openai package not installed. Run: pip install openai", done=True)
         return
 
-    base_url = _resolve_api_key("OLLAMA_BASE_URL", "ollama", user_api_keys) or "http://localhost:11434"
+    base_url = (
+        _resolve_api_key("OLLAMA_BASE_URL", "ollama", user_api_keys) or "http://localhost:11434"
+    )
     client = AsyncOpenAI(
         base_url=f"{base_url.rstrip('/')}/v1",
         api_key="ollama",
     )
 
-    actual_model = model_id[len("ollama/"):] if model_id.startswith("ollama/") else model_id
+    actual_model = model_id[len("ollama/") :] if model_id.startswith("ollama/") else model_id
 
     messages = [{"role": "system", "content": system_prompt}]
     messages += history
@@ -850,12 +1006,14 @@ async def _stream_ollama(
 # Public interface
 # ---------------------------------------------------------------------------
 
+
 async def stream_response(
     model_id: str,
     system_prompt: str,
     history: list[dict],
     message: str,
     user_api_keys: dict | None = None,
+    enable_tools: bool = False,
 ) -> AsyncIterator[str]:
     """
     Route to the correct provider and stream SSE-formatted response tokens.
@@ -866,37 +1024,58 @@ async def stream_response(
         history: Prior conversation turns [{role, content}]
         message: Current user message
         user_api_keys: None = demo/testnet (env fallback), dict = user's own keys.
+        enable_tools: If True, pass built-in tools to the AI (Pass/Drive/Mail/Calendar operations)
 
     Yields:
         SSE data frames: 'data: {"content": "token", "done": false}\\n\\n'
+        Tool use events: 'event: tool_use\\ndata: {"tool_use_id": "...", "tool_name": "...", "tool_input": {...}}\\n\\n'
         Final frame: 'data: {"content": "", "done": true}\\n\\n'
     """
     meta = get_model_meta(model_id, user_api_keys=user_api_keys)
     provider = meta["provider"]
 
+    # Get built-in tools if enabled
+    tools = get_tool_definitions() if enable_tools else None
+
     if provider == "openai":
-        async for chunk in _stream_openai(model_id, system_prompt, history, message, user_api_keys=user_api_keys):
+        async for chunk in _stream_openai(
+            model_id, system_prompt, history, message, user_api_keys=user_api_keys
+        ):
             yield chunk
     elif provider == "anthropic":
-        async for chunk in _stream_anthropic(model_id, system_prompt, history, message, user_api_keys=user_api_keys):
+        async for chunk in _stream_anthropic(
+            model_id, system_prompt, history, message, user_api_keys=user_api_keys, tools=tools
+        ):
             yield chunk
     elif provider == "google":
-        async for chunk in _stream_google(model_id, system_prompt, history, message, user_api_keys=user_api_keys):
+        async for chunk in _stream_google(
+            model_id, system_prompt, history, message, user_api_keys=user_api_keys
+        ):
             yield chunk
     elif provider == "mistral":
-        async for chunk in _stream_mistral(model_id, system_prompt, history, message, user_api_keys=user_api_keys):
+        async for chunk in _stream_mistral(
+            model_id, system_prompt, history, message, user_api_keys=user_api_keys
+        ):
             yield chunk
     elif provider == "groq":
-        async for chunk in _stream_groq(model_id, system_prompt, history, message, user_api_keys=user_api_keys):
+        async for chunk in _stream_groq(
+            model_id, system_prompt, history, message, user_api_keys=user_api_keys
+        ):
             yield chunk
     elif provider == "xai":
-        async for chunk in _stream_xai(model_id, system_prompt, history, message, user_api_keys=user_api_keys):
+        async for chunk in _stream_xai(
+            model_id, system_prompt, history, message, user_api_keys=user_api_keys
+        ):
             yield chunk
     elif provider == "ollama":
-        async for chunk in _stream_ollama(model_id, system_prompt, history, message, user_api_keys=user_api_keys):
+        async for chunk in _stream_ollama(
+            model_id, system_prompt, history, message, user_api_keys=user_api_keys
+        ):
             yield chunk
     elif provider == "openrouter":
-        async for chunk in _stream_openrouter(model_id, system_prompt, history, message, user_api_keys=user_api_keys):
+        async for chunk in _stream_openrouter(
+            model_id, system_prompt, history, message, user_api_keys=user_api_keys
+        ):
             yield chunk
     else:
         yield _sse(f"[ERROR] Unknown provider: {provider}", done=True)
@@ -913,7 +1092,9 @@ async def generate_completion(
     Returns the full response text.
     """
     full = []
-    async for chunk in stream_response(model_id, system_prompt, [], message, user_api_keys=user_api_keys):
+    async for chunk in stream_response(
+        model_id, system_prompt, [], message, user_api_keys=user_api_keys
+    ):
         if chunk.startswith("data: "):
             try:
                 data = json.loads(chunk[6:])
