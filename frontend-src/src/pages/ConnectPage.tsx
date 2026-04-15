@@ -6,36 +6,42 @@ import Header from '../components/layout/Header'
 type Mode = 'returning' | 'new'
 
 export default function ConnectPage() {
-  const { savedTokenId, setSavedTokenId, setView, openSession } = useAppStore()
+  const { savedTokenId, setSavedTokenId, openSession } = useAppStore()
 
   const [mode, setMode] = useState<Mode>(savedTokenId ? 'returning' : 'new')
   const [tokenId, setTokenId] = useState(savedTokenId ?? '')
+  const [passphrase, setPassphrase] = useState('')
+  const [showPassphrase, setShowPassphrase] = useState(false)
+
+  // New user fields
   const [accountId, setAccountId] = useState('')
   const [companionName, setCompanionName] = useState('')
+  const [newPassphrase, setNewPassphrase] = useState('')
+  const [confirmPassphrase, setConfirmPassphrase] = useState('')
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-
-  // Provisioning state (new user flow)
-  const [step, setStep] = useState<'form' | 'sign' | 'complete'>('form')
-  const [pendingTokenId, setPendingTokenId] = useState('')
-  const [challengeHex, setChallengeHex] = useState('')
-  const [walletSigHex, setWalletSigHex] = useState('')
 
   function err(msg: string) {
     setError(msg)
     setLoading(false)
   }
 
-  // ── Returning user: get challenge → show sign step
-  async function handleReturnStart() {
-    if (!tokenId.trim()) return err('Enter your token ID.')
+  // ── Returning user: open session with passphrase
+  async function handleConnect() {
+    if (!tokenId.trim()) return err('Enter your companion ID.')
+    if (passphrase.length < 8) return err('Passphrase must be at least 8 characters.')
     setLoading(true)
     setError('')
     try {
-      const data = await api.session.challenge(tokenId.trim())
-      setPendingTokenId(tokenId.trim())
-      setChallengeHex(data.challenge_hex)
-      setStep('sign')
+      const session = await api.session.open(tokenId.trim(), { passphrase })
+      setSavedTokenId(session.token_id)
+      openSession({
+        sessionId: session.session_id,
+        tokenId: session.token_id,
+        sections: session.context_sections ?? {},
+        expiresAt: session.expires_at,
+      })
     } catch (e: unknown) {
       err(e instanceof Error ? e.message : String(e))
     } finally {
@@ -43,61 +49,21 @@ export default function ConnectPage() {
     }
   }
 
-  // ── New user: provision start → show sign step
-  async function handleNewStart() {
-    if (!accountId.trim()) return err('Enter an account ID or name.')
+  // ── New user: provision then open session
+  async function handleCreate() {
+    if (!accountId.trim()) return err('Enter your Hedera account ID.')
     if (!companionName.trim()) return err('Name your AI companion.')
+    if (newPassphrase.length < 8) return err('Passphrase must be at least 8 characters.')
+    if (newPassphrase !== confirmPassphrase) return err('Passphrases do not match.')
     setLoading(true)
     setError('')
     try {
-      const data = await api.user.provisionStart(accountId.trim(), companionName.trim())
-      setPendingTokenId(data.token_id)
-      setChallengeHex(data.challenge_hex)
-      setStep('sign')
-    } catch (e: unknown) {
-      err(e instanceof Error ? e.message : String(e))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // ── Demo sign (operator key, server-side) — calls /demo/sign
-  async function handleDemoSign() {
-    if (!walletSigHex) {
-      // For demo mode: auto-generate a signature client-side by calling /demo/sign
-      setLoading(true)
-      setError('')
-      try {
-        const res = await fetch('/demo/sign', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token_id: pendingTokenId }),
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.detail ?? 'Demo sign failed')
-        setWalletSigHex(data.signature_hex)
-      } catch (e: unknown) {
-        err(e instanceof Error ? e.message : String(e))
-      } finally {
-        setLoading(false)
-      }
-    }
-  }
-
-  // ── Complete: provision complete (new) OR open session (returning)
-  async function handleComplete() {
-    if (!walletSigHex.trim()) return err('Enter or generate a wallet signature.')
-    setLoading(true)
-    setError('')
-    try {
-      // For new users: complete provisioning first
-      if (mode === 'new' && step === 'sign') {
-        await api.user.provisionComplete(pendingTokenId, walletSigHex.trim())
-      }
-
+      // Provision: start → complete using passphrase as wallet sig placeholder for demo
+      const start = await api.user.provisionStart(accountId.trim(), companionName.trim())
+      await api.user.provisionComplete(start.token_id, newPassphrase)
       // Open session
-      const session = await api.session.open(pendingTokenId, walletSigHex.trim())
-      setSavedTokenId(pendingTokenId)
+      const session = await api.session.open(start.token_id, { passphrase: newPassphrase })
+      setSavedTokenId(session.token_id)
       openSession({
         sessionId: session.session_id,
         tokenId: session.token_id,
@@ -127,35 +93,34 @@ export default function ConnectPage() {
           </div>
 
           {/* Mode toggle */}
-          {step === 'form' && (
-            <div className="flex rounded-lg border border-surface-border overflow-hidden">
-              <button
-                onClick={() => setMode('returning')}
-                className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                  mode === 'returning'
-                    ? 'bg-brand text-white'
-                    : 'bg-surface-card text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                I have a companion
-              </button>
-              <button
-                onClick={() => setMode('new')}
-                className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                  mode === 'new'
-                    ? 'bg-brand text-white'
-                    : 'bg-surface-card text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                New to Arty Fitchels
-              </button>
-            </div>
-          )}
+          <div className="flex rounded-lg border border-surface-border overflow-hidden">
+            <button
+              onClick={() => { setMode('returning'); setError('') }}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                mode === 'returning'
+                  ? 'bg-brand text-white'
+                  : 'bg-surface-card text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              I have a companion
+            </button>
+            <button
+              onClick={() => { setMode('new'); setError('') }}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                mode === 'new'
+                  ? 'bg-brand text-white'
+                  : 'bg-surface-card text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              New to Arty Fitchels
+            </button>
+          </div>
 
           {/* Form */}
           <div className="card space-y-4">
-            {/* ── Step: form ── */}
-            {step === 'form' && mode === 'returning' && (
+
+            {/* ── Returning user ── */}
+            {mode === 'returning' && (
               <>
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Companion ID</label>
@@ -164,16 +129,38 @@ export default function ConnectPage() {
                     placeholder="0.0.12345"
                     value={tokenId}
                     onChange={(e) => setTokenId(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleReturnStart()}
+                    autoComplete="username"
                   />
                 </div>
-                <button onClick={handleReturnStart} disabled={loading} className="btn-primary w-full">
-                  {loading ? 'Connecting…' : 'Connect to Companion'}
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Passphrase</label>
+                  <div className="relative">
+                    <input
+                      className="input pr-10"
+                      type={showPassphrase ? 'text' : 'password'}
+                      placeholder="Your vault passphrase"
+                      value={passphrase}
+                      onChange={(e) => setPassphrase(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassphrase((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs"
+                    >
+                      {showPassphrase ? 'hide' : 'show'}
+                    </button>
+                  </div>
+                </div>
+                <button onClick={handleConnect} disabled={loading} className="btn-primary w-full">
+                  {loading ? 'Opening…' : 'Open Companion'}
                 </button>
               </>
             )}
 
-            {step === 'form' && mode === 'new' && (
+            {/* ── New user ── */}
+            {mode === 'new' && (
               <>
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Your Hedera Account ID</label>
@@ -191,69 +178,35 @@ export default function ConnectPage() {
                     placeholder="e.g. Aria, Atlas, Nova…"
                     value={companionName}
                     onChange={(e) => setCompanionName(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleNewStart()}
                   />
                 </div>
-                <button onClick={handleNewStart} disabled={loading} className="btn-primary w-full">
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Create a passphrase</label>
+                  <input
+                    className="input"
+                    type="password"
+                    placeholder="At least 8 characters"
+                    value={newPassphrase}
+                    onChange={(e) => setNewPassphrase(e.target.value)}
+                    autoComplete="new-password"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">Confirm passphrase</label>
+                  <input
+                    className="input"
+                    type="password"
+                    placeholder="Repeat passphrase"
+                    value={confirmPassphrase}
+                    onChange={(e) => setConfirmPassphrase(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+                    autoComplete="new-password"
+                  />
+                </div>
+                <button onClick={handleCreate} disabled={loading} className="btn-primary w-full">
                   {loading ? 'Creating companion…' : 'Meet Your AI'}
                 </button>
               </>
-            )}
-
-            {/* ── Step: sign ── */}
-            {step === 'sign' && (
-              <div className="space-y-4">
-                <div>
-                  <div className="text-xs text-slate-400 mb-1">Companion ID</div>
-                  <div className="mono text-sm text-brand">{pendingTokenId}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-slate-400 mb-1">Challenge</div>
-                  <div className="mono text-xs text-slate-500 break-all line-clamp-2">
-                    {challengeHex}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">
-                    Wallet Signature (hex)
-                  </label>
-                  <input
-                    className="input mono text-xs"
-                    placeholder="Paste Ed25519/secp256k1 signature…"
-                    value={walletSigHex}
-                    onChange={(e) => setWalletSigHex(e.target.value)}
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleDemoSign}
-                    disabled={loading}
-                    className="btn-secondary flex-1"
-                  >
-                    {loading ? '…' : '⚡ Demo Sign'}
-                  </button>
-                  <button
-                    onClick={handleComplete}
-                    disabled={loading || !walletSigHex}
-                    className="btn-primary flex-1"
-                  >
-                    {loading
-                      ? 'Opening…'
-                      : mode === 'new'
-                      ? 'Connect'
-                      : 'Open Companion'}
-                  </button>
-                </div>
-
-                <button
-                  onClick={() => { setStep('form'); setError(''); setWalletSigHex('') }}
-                  className="btn-ghost w-full text-xs"
-                >
-                  ← Back
-                </button>
-              </div>
             )}
 
             {error && (

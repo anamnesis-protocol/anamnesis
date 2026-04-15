@@ -14,9 +14,22 @@
   "tauri": {
     "allowlist": {
       "all": false,
+      "fs": {
+        "all": true,
+        "scope": ["**"]
+      },
       "shell": {
         "all": false,
-        "open": true
+        "open": true,
+        "execute": true,
+        "sidecar": false,
+        "scope": [
+          { "name": "bash", "cmd": "bash", "args": true },
+          { "name": "grep", "cmd": "grep", "args": true }
+        ]
+      },
+      "dialog": {
+        "all": true
       }
     },
     "bundle": {

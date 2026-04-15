@@ -28,6 +28,11 @@ export default defineConfig({
       '/skills': 'http://localhost:8000',
       '/vault': 'http://localhost:8000',
       '/health': 'http://localhost:8000',
+      '/pass': 'http://localhost:8000',
+      '/drive': 'http://localhost:8000',
+      '/mail': 'http://localhost:8000',
+      '/calendar': 'http://localhost:8000',
+      '/knowledge': 'http://localhost:8000',
     },
   },
 })

@@ -14,6 +14,9 @@ tauri-build = { version = "1.5", features = [] }
 [dependencies]
 tauri = { version = "1.8", features = [
   "shell-open",
+  "shell-execute",
+  "fs-all",
+  "dialog-all",
   "system-tray",
 ] }
 serde = { version = "1", features = ["derive"] }
