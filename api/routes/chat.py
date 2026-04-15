@@ -37,7 +37,13 @@ from pydantic import BaseModel, Field
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from api.session_store import get_session, Session
-from api.services.ai_router import available_models, stream_response, get_model_meta, recommend_model, MODELS
+from api.services.ai_router import (
+    available_models,
+    stream_response,
+    get_model_meta,
+    recommend_model,
+    MODELS,
+)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -45,6 +51,7 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _ensure_user_keys(session: Session) -> None:
     """
@@ -60,19 +67,21 @@ def _ensure_user_keys(session: Session) -> None:
     Otherwise → fetch from Supabase, set on session
     """
     if session.user_id in ("", "demo-user"):
-        return # demo/testnet — use server .env keys (user_api_keys remains None)
+        return  # demo/testnet — use server .env keys (user_api_keys remains None)
     if session.user_api_keys is not None:
-        return # already loaded this session
+        return  # already loaded this session
     try:
         from api.services.key_store import get_user_keys
+
         session.user_api_keys = get_user_keys(session.user_id)
     except Exception:
-        session.user_api_keys = {} # treat Supabase errors as "no keys configured"
+        session.user_api_keys = {}  # treat Supabase errors as "no keys configured"
 
 
 # ---------------------------------------------------------------------------
 # Models
 # ---------------------------------------------------------------------------
+
 
 class ChatMessage(BaseModel):
     role: str = Field(description="'user' or 'assistant'")
@@ -91,6 +100,14 @@ class ChatRequest(BaseModel):
             "Do NOT include the system prompt in history."
         ),
     )
+    enable_tools: bool = Field(
+        default=False,
+        description=(
+            "Enable built-in tools for agentic operations. "
+            "When True, the AI can invoke Pass/Drive/Mail/Calendar operations during the conversation. "
+            "The frontend must handle tool_use SSE events and execute tools via API calls."
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -102,9 +119,10 @@ _SECTION_LABELS = {
     "user": "USER PROFILE",
     "config": "AI CONFIGURATION",
     "session_state": "SESSION CONTEXT",
+    "knowledge": "KNOWLEDGE BASE",
 }
 
-_SECTION_ORDER = ["harness", "user", "config", "session_state"]
+_SECTION_ORDER = ["harness", "user", "config", "session_state", "knowledge"]
 
 
 def build_system_prompt(
@@ -201,9 +219,12 @@ def build_system_prompt(
 # POST /chat/keys — store API keys on an active session (no Supabase required)
 # ---------------------------------------------------------------------------
 
+
 class SessionKeysRequest(BaseModel):
     session_id: str
-    keys: dict[str, str] = Field(description="provider -> api_key, e.g. {'anthropic': 'sk-ant-...'}")
+    keys: dict[str, str] = Field(
+        description="provider -> api_key, e.g. {'anthropic': 'sk-ant-...'}"
+    )
 
 
 @router.post("/keys")
@@ -219,13 +240,18 @@ def set_session_keys(req: SessionKeysRequest):
     """
     session = get_session(req.session_id)
     if not session:
-        raise HTTPException(status_code=404, detail=f"Session '{req.session_id}' not found or expired.")
+        raise HTTPException(
+            status_code=404, detail=f"Session '{req.session_id}' not found or expired."
+        )
 
     valid_providers = {meta["provider"] for meta in MODELS.values()}
     stored = []
     for provider, key in req.keys.items():
         if provider not in valid_providers:
-            raise HTTPException(status_code=400, detail=f"Unknown provider '{provider}'. Valid: {sorted(valid_providers)}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown provider '{provider}'. Valid: {sorted(valid_providers)}",
+            )
         if not key.strip():
             continue
         if session.user_api_keys is None:
@@ -240,6 +266,7 @@ def set_session_keys(req: SessionKeysRequest):
 # GET /chat/models
 # ---------------------------------------------------------------------------
 
+
 @router.get("/models")
 def list_models(session_id: str | None = None):
     """
@@ -249,7 +276,7 @@ def list_models(session_id: str | None = None):
     API keys configured for (BYOK). Without session_id (or demo sessions),
     falls back to server .env keys (demo/testnet mode).
     """
-    user_api_keys = None # default: demo/testnet — use env keys
+    user_api_keys = None  # default: demo/testnet — use env keys
     if session_id:
         session = get_session(session_id)
         if session:
@@ -273,6 +300,7 @@ def list_models(session_id: str | None = None):
 # ---------------------------------------------------------------------------
 # POST /chat/recommend
 # ---------------------------------------------------------------------------
+
 
 class RecommendRequest(BaseModel):
     session_id: str = Field(description="Active session UUID from /session/open")
@@ -326,6 +354,7 @@ def recommend(req: RecommendRequest):
 # ---------------------------------------------------------------------------
 # POST /chat/message (SSE streaming)
 # ---------------------------------------------------------------------------
+
 
 @router.post("/message")
 async def chat_message(req: ChatRequest):
@@ -386,7 +415,9 @@ async def chat_message(req: ChatRequest):
     history = [{"role": msg.role, "content": msg.content} for msg in req.history]
 
     # ---- Stream response ----
-    _user_api_keys = session.user_api_keys # capture before yielding (session could close mid-stream)
+    _user_api_keys = (
+        session.user_api_keys
+    )  # capture before yielding (session could close mid-stream)
 
     async def event_stream():
         async for chunk in stream_response(
@@ -395,6 +426,7 @@ async def chat_message(req: ChatRequest):
             history=history,
             message=req.message,
             user_api_keys=_user_api_keys,
+            enable_tools=req.enable_tools,
         ):
             yield chunk
 
@@ -403,6 +435,6 @@ async def chat_message(req: ChatRequest):
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no", # disable nginx buffering for SSE
+            "X-Accel-Buffering": "no",  # disable nginx buffering for SSE
         },
     )
