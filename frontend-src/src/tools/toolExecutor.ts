@@ -237,7 +237,7 @@ async function handleSearchFiles(input: {
   try {
     // Use shell grep -r. On Windows with Git Bash this works natively.
     const args = ['-r', '--include', input.file_pattern ?? '*', '-n', input.pattern, input.directory]
-    const cmd = Command.create('grep', args)
+    const cmd = new Command('grep', args)
     const out = await cmd.execute()
     if (out.code !== 0 && out.stdout === '') {
       return { content: 'No matches found.' }
@@ -250,7 +250,7 @@ async function handleSearchFiles(input: {
 
 async function handleExecuteCommand(input: { command: string; cwd?: string }): Promise<ToolResult> {
   try {
-    const cmd = Command.create('bash', ['-c', input.command], {
+    const cmd = new Command('bash', ['-c', input.command], {
       cwd: input.cwd,
     })
     const out = await cmd.execute()
