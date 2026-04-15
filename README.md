@@ -1,28 +1,108 @@
 # Sovereign AI Context
 
-**The backend and patent reference implementation powering [Arty Fitchel's](https://artyfitchels.ai).**
+**The first cryptographically-owned AI companion platform. Production-ready.**
 
-Your AI companion's context is encrypted, stored on Hedera Hashgraph, and cryptographically bound to your wallet — making it impossible to steal, corrupt, or access without your explicit consent. The architecture is the subject of US provisional patents P1–P3 (filed 2026).
+Your AI companion's context is encrypted, stored on Hedera Hashgraph, and cryptographically bound to your NFT — making it impossible to steal, corrupt, or access without your explicit consent. Unlike ChatGPT, Claude, or Gemini where the platform owns your context, **you own your AI relationship forever**.
+
+**Status:** Production deployment with desktop app (Windows/macOS/Linux), full suite integration, and agentic tool execution.
 
 ## The Problem
 
-When you build a personalized AI assistant:
-- Your context sits on someone else's server
-- The platform can read, modify, or sell your data
-- You can't prove your data hasn't been tampered with
-- You're locked into one model — switch models, lose memory
-- If the platform shuts down, your AI's memory is gone forever
+Current AI companions are **rented, not owned**:
+- Your context sits on someone else's server (OpenAI, Anthropic, Google)
+- The platform can read, modify, train on, or sell your data
+- You're locked into one model — switch providers, lose all context
+- No cryptographic proof your data hasn't been tampered with
+- If the platform shuts down or changes terms, your AI relationship is gone
+- AI can't act autonomously on your behalf (security constraints)
 
 ## The Solution
 
-Sovereign AI Context uses Hedera Hashgraph to give you cryptographic proof of ownership and tamper-proof storage:
+Sovereign AI Context is **infrastructure for individual sovereignty in the AI age**:
 
-- **Theft-Proof**: Context is encrypted with a key derived from your wallet signature — only you can decrypt it
-- **Corruption-Proof**: Hedera's consensus service creates an immutable audit trail of every change
-- **Model-Agnostic**: Load your context into Claude, GPT-4, Gemini, or any AI model
-- **Verifiable Ownership**: Your companion token NFT proves cryptographic ownership on-chain
-- **Permanent**: Memory persists on Hedera's decentralized network, not a company's server
-- **Intelligent Retrieval**: TF-IDF RAG surfaces relevant memory packages by semantic similarity
+### Core Innovations
+
+**1. NFT-Gated Vault Storage**
+- Context encrypted with AES-256-GCM, stored on Hedera File Service (HFS)
+- Soul Token NFT proves ownership — transfer NFT = transfer complete AI relationship
+- Immutable storage survives platform changes, company shutdowns
+- Zero-knowledge architecture: server never persistently stores decryption keys
+
+**2. Multi-Provider AI Routing**
+- Works with **6 AI providers**: OpenAI, Anthropic, Google, Mistral, Groq, Ollama
+- Same vault context injected to all providers (model-agnostic)
+- BYOK (Bring Your Own Keys): use your API keys, not platform's
+- Task-aware model recommendation (coding → Claude, vision → GPT-4o, etc.)
+
+**3. Agentic Tool Execution**
+- **20 tools** across local file system and encrypted backend services
+- **Tauri tools (7)**: read_file, write_file, list_directory, search_files, execute_command, open_file_dialog, open_folder_dialog
+- **API tools (13)**: password management, secure notes, TOTP/2FA, encrypted messaging, file storage, calendar
+- Session-bound security: tools only execute within cryptographic session boundaries
+- AI can autonomously manage your digital life (retrieve passwords, send encrypted mail, manage calendar)
+
+**4. Cryptographic Knowledge Transfer**
+- Complete AI context transferable via NFT ownership
+- Digital inheritance: pass AI companion to heirs
+- Expertise transfer: sell/gift domain knowledge
+- Institutional memory: retain employee knowledge (with consent)
+
+### What This Enables
+
+- **True Ownership**: Your AI relationship is yours forever (not rental)
+- **No Platform Lock-In**: Switch AI providers without losing context
+- **Autonomous Operations**: AI manages passwords, calendar, mail, files
+- **Privacy**: Zero-knowledge architecture (cryptographic, not trust-based)
+- **Persistence**: Immutable ledger storage (survives any platform change)
+- **Knowledge Compounding**: Transfer complete expertise across generations
+
+---
+
+## Features
+
+### AI Companion Suite
+- **AI Chat**: Multi-provider routing with streaming responses (OpenAI, Anthropic, Google, Mistral, Groq, Ollama)
+- **Password Manager**: Encrypted password storage with CSV import/export (Proton Pass, Bitwarden, LastPass, Chrome)
+- **Secure Notes**: Credit card, document, and custom note templates with field masking
+- **Authenticator**: RFC 6238 TOTP generation with countdown timer
+- **Encrypted Mail**: End-to-end encrypted messaging between Soul Tokens
+- **File Storage**: Encrypted file vault with upload/download
+- **Calendar**: Event management with color coding
+- **Knowledge Base**: Import and search domain knowledge for AI context
+
+### Agentic Capabilities (NEW)
+AI can autonomously execute **20 tools** during conversations:
+
+**File System Operations (Tauri):**
+- Read/write files on local system
+- List directories and search files
+- Execute shell commands
+- Open file/folder dialogs
+
+**Vault Operations (API):**
+- Retrieve passwords and TOTP codes
+- Manage secure notes
+- Send encrypted messages
+- Create calendar events
+- Access knowledge base
+
+**Example:** "What's my GitHub password?" → AI retrieves it from encrypted vault  
+**Example:** "Schedule a meeting for tomorrow at 2pm" → AI creates calendar event  
+**Example:** "Send an encrypted message to token 0.0.12345" → AI composes and sends
+
+### Multi-Provider AI Routing
+- **6 providers supported**: OpenAI, Anthropic, Google, Mistral, Groq, Ollama
+- **BYOK**: Use your own API keys (not platform's)
+- **Task-aware**: Auto-recommends best model for task (coding, vision, reasoning, etc.)
+- **Same context**: Vault injected identically to all providers
+- **No lock-in**: Switch providers without losing context
+
+### Security & Privacy
+- **Zero-knowledge**: Server never persistently stores decryption keys
+- **AES-256-GCM**: Military-grade encryption
+- **Session-bound**: Tools only execute within cryptographic session boundaries
+- **Immutable storage**: Vault on Hedera Hashgraph (survives platform changes)
+- **NFT ownership**: Soul Token proves cryptographic ownership
 
 ---
 
@@ -146,14 +226,18 @@ Download releases: [Releases](https://github.com/gamilu/context-sovereignty/rele
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | FastAPI (Python) |
-| Web frontend | React SPA |
-| Desktop | Tauri (Rust) |
+| Backend | FastAPI (Python 3.11+) |
+| AI Providers | OpenAI, Anthropic, Google, Mistral, Groq, Ollama |
+| Desktop | Tauri 1.x (Rust + React + TypeScript) |
 | Mobile | Expo (React Native) |
-| Blockchain | Hedera (HTS, HFS, HCS, EVM) |
-| Encryption | HKDF-SHA256 + AES-256-GCM |
-| Auth | Supabase |
-| CI/CD | GitHub Actions |
+| Web | React SPA |
+| Blockchain | Hedera (HTS, HFS, HCS) |
+| Encryption | AES-256-GCM, PBKDF2/WebAuthn PRF |
+| Database | Supabase (optional BYOK storage) |
+| Styling | TailwindCSS |
+| State | Zustand |
+| Build | Vite, TypeScript 5 |
+| CI/CD | GitHub Actions, Vercel |
 
 ---
 
@@ -171,18 +255,35 @@ The core architecture is the subject of three US provisional patent applications
 
 ## Roadmap
 
-- [x] Core encryption and key derivation (HKDF + AES-256-GCM)
-- [x] Hedera integration (HTS, HFS, HCS, Smart Contracts)
-- [x] FastAPI backend with auth, billing, companion endpoints
-- [x] Web demo interface
-- [x] Supabase auth integration
-- [x] CI/CD pipeline (GitHub Actions)
-- [x] Docker containerization
-- [x] Production deployment (Railway)
+### Completed ✅
+- [x] Core encryption and key derivation (AES-256-GCM, PBKDF2/WebAuthn PRF)
+- [x] Hedera integration (HTS, HFS, HCS)
+- [x] FastAPI backend with session management, vault operations
+- [x] Multi-provider AI routing (OpenAI, Anthropic, Google, Mistral, Groq, Ollama)
+- [x] BYOK credential management
+- [x] RAG-gated context retrieval (TF-IDF)
+- [x] Task-aware model recommendation
+- [x] **Agentic tool execution (20 tools: Tauri + API)**
+- [x] **Full suite integration (Pass, Notes, Authenticator, Drive, Mail, Calendar, Knowledge)**
 - [x] Desktop app (Tauri — Windows, macOS, Linux)
 - [x] Mobile app (Expo — iOS/Android)
-- [ ] Memory package marketplace
-- [ ] Multi-operator support
+- [x] Web interface
+- [x] CI/CD pipeline (GitHub Actions)
+- [x] Docker containerization
+- [x] Production deployment
+
+### In Progress 🚧
+- [ ] Knowledge marketplace (skill packages, expertise transfer)
+- [ ] AI-to-AI delegation
+- [ ] Enhanced RAG (semantic search, better chunking)
+- [ ] Enterprise features (SSO, RBAC, audit logs)
+
+### Planned 📋
+- [ ] Decentralized vault storage (IPFS + Hedera)
+- [ ] Cross-chain NFT support
+- [ ] Federated learning (privacy-preserving model training)
+- [ ] Browser extension
+- [ ] API marketplace (AI-to-AI services)
 
 ---
 
