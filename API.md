@@ -535,8 +535,398 @@ requests.post("http://localhost:8000/session/close", json={
   - Session management
   - Vault operations
   - Chat completions
+- **v1.1.0** (2026-04-14) - Suite service endpoints
+  - Arty Pass (password manager + secure notes + TOTP authenticator)
+  - Arty Drive (encrypted file storage)
+  - Arty Mail (encrypted messaging)
+  - Arty Calendar (encrypted calendar)
 
 ---
 
-**Last Updated:** 2026-04-02  
-**API Version:** 1.0.0
+**Last Updated:** 2026-04-15
+**API Version:** 1.1.0
+
+---
+
+## Suite Services
+
+All suite endpoints use session-based authentication. Pass `session_id` in the request body (POST/PATCH) or as a query parameter (GET/DELETE). The `session_id` is obtained from `POST /session/open` and is valid for the duration of the session.
+
+The session resolves to a `token_id` server-side — the client never sends `token_id` directly to suite endpoints.
+
+---
+
+### Arty Pass
+
+Password manager endpoints. All data encrypted on Hedera HFS with purpose-separated key (`sovereign-ai-pass-v1`).
+
+#### POST /pass/init
+
+Create a new password vault. Call once at account setup (auto-called during onboarding).
+
+**Request:**
+```json
+{ "session_id": "sess_abc123" }
+```
+
+**Response:**
+```json
+{ "initialized": true, "file_id": "0.0.12345" }
+```
+
+**Status Codes:** `200` Success · `409` Vault already exists · `401` Session not found
+
+---
+
+#### GET /pass/entries?session_id=
+
+List all password entries. Passwords are never returned in the list — only metadata.
+
+**Response:**
+```json
+{
+  "entries": [
+    {
+      "id": "uuid",
+      "name": "GitHub",
+      "username": "lee@example.com",
+      "url": "https://github.com",
+      "updated_at": "2026-04-15T00:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+#### POST /pass/entry
+
+Add a new credential entry.
+
+**Request:**
+```json
+{
+  "session_id": "sess_abc123",
+  "name": "GitHub",
+  "username": "lee@example.com",
+  "password": "hunter2",
+  "url": "https://github.com",
+  "notes": ""
+}
+```
+
+**Response:**
+```json
+{ "entry_id": "uuid" }
+```
+
+---
+
+#### GET /pass/entry/{entry_id}?session_id=
+
+Retrieve the password for a specific entry. Only called when the user explicitly requests it.
+
+**Response:**
+```json
+{ "entry_id": "uuid", "password": "hunter2" }
+```
+
+---
+
+#### PATCH /pass/entry/{entry_id}
+
+Update one or more fields on an entry.
+
+**Request:**
+```json
+{
+  "session_id": "sess_abc123",
+  "password": "new-password",
+  "notes": "Updated note"
+}
+```
+
+**Response:**
+```json
+{ "updated": "uuid" }
+```
+
+---
+
+#### DELETE /pass/entry/{entry_id}?session_id=
+
+Remove a credential entry.
+
+**Response:**
+```json
+{ "deleted": "uuid" }
+```
+
+---
+
+### Secure Notes
+
+Encrypted notes — credit cards, documents, custom records. Stored alongside Pass vault data.
+
+#### POST /pass/note · GET /pass/notes?session_id= · GET /pass/note/{id}?session_id= · PATCH /pass/note/{id} · DELETE /pass/note/{id}?session_id=
+
+Same pattern as Pass entries. Note object:
+
+```json
+{
+  "id": "uuid",
+  "title": "My credit card",
+  "type": "credit_card",
+  "fields": { "number": "4111...", "expiry": "12/28", "cvv": "123" },
+  "created_at": "...",
+  "updated_at": "..."
+}
+```
+
+`type` values: `credit_card` · `document` · `custom`
+
+---
+
+### Arty Authenticator (TOTP)
+
+TOTP two-factor codes stored in the encrypted vault.
+
+#### POST /pass/totp · GET /pass/totp?session_id= · DELETE /pass/totp/{id}?session_id=
+
+TOTP object:
+
+```json
+{
+  "id": "uuid",
+  "issuer": "GitHub",
+  "account": "lee@example.com",
+  "secret": "JBSWY3DPEHPK3PXP",
+  "algorithm": "SHA1",
+  "digits": 6,
+  "period": 30
+}
+```
+
+Codes are generated client-side from the stored secret using RFC 6238. The secret is decrypted when the vault is open — codes are never stored.
+
+---
+
+### Arty Drive
+
+Encrypted file storage on Hedera HFS. Files are AES-256-GCM encrypted before upload, stored as HFS blobs, indexed per token.
+
+#### POST /drive/init
+
+Create the drive vault. Auto-called during onboarding.
+
+**Request:** `{ "session_id": "sess_abc123" }`
+
+---
+
+#### POST /drive/upload
+
+Upload and encrypt a file.
+
+**Request:** `multipart/form-data` with fields:
+- `session_id` — string
+- `file` — binary file data
+
+**Response:**
+```json
+{
+  "id": "uuid",
+  "filename": "document.pdf",
+  "size_bytes": 204800,
+  "mime_type": "application/pdf",
+  "sha256": "abc123...",
+  "uploaded_at": "2026-04-15T00:00:00Z"
+}
+```
+
+---
+
+#### GET /drive/files?session_id=
+
+List all files (metadata only — no file content).
+
+**Response:**
+```json
+{
+  "files": [
+    {
+      "id": "uuid",
+      "filename": "document.pdf",
+      "size_bytes": 204800,
+      "mime_type": "application/pdf",
+      "uploaded_at": "2026-04-15T00:00:00Z",
+      "tags": [],
+      "sha256": "abc123..."
+    }
+  ]
+}
+```
+
+---
+
+#### GET /drive/file/{file_id}?session_id=
+
+Download and decrypt a file. Returns raw file bytes with original `Content-Type`.
+
+---
+
+#### DELETE /drive/file/{file_id}?session_id=
+
+Remove a file from the drive vault.
+
+**Response:** `{ "deleted": "uuid" }`
+
+---
+
+### Arty Mail
+
+Encrypted messaging between companion accounts. Messages encrypted with the sender's vault key and stored on HFS.
+
+#### POST /mail/init
+
+Create the mail vault. Auto-called during onboarding.
+
+---
+
+#### POST /mail/send
+
+Send an encrypted message.
+
+**Request:**
+```json
+{
+  "session_id": "sess_abc123",
+  "to_token_id": "0.0.99999",
+  "subject": "Hello",
+  "body": "Encrypted message body"
+}
+```
+
+**Response:**
+```json
+{ "message_id": "uuid", "sent_at": "2026-04-15T00:00:00Z" }
+```
+
+---
+
+#### GET /mail/inbox?session_id= · GET /mail/sent?session_id= · GET /mail/unread?session_id=
+
+List messages. Returns message metadata without body content.
+
+**Response:**
+```json
+{
+  "messages": [
+    {
+      "id": "uuid",
+      "from_token_id": "0.0.12345",
+      "subject": "Hello",
+      "sent_at": "2026-04-15T00:00:00Z",
+      "read": false
+    }
+  ]
+}
+```
+
+---
+
+#### GET /mail/message/{message_id}?session_id=
+
+Retrieve a full message including decrypted body.
+
+---
+
+#### DELETE /mail/message/{message_id}?session_id=
+
+Delete a message.
+
+---
+
+### Arty Calendar
+
+Encrypted calendar events on Hedera HFS.
+
+#### POST /calendar/init
+
+Create the calendar vault. Auto-called during onboarding.
+
+---
+
+#### POST /calendar/event
+
+Add a new calendar event.
+
+**Request:**
+```json
+{
+  "session_id": "sess_abc123",
+  "title": "Team sync",
+  "start": "2026-04-15T09:00:00Z",
+  "end": "2026-04-15T10:00:00Z",
+  "all_day": false,
+  "description": "",
+  "location": "Zoom",
+  "color": "violet"
+}
+```
+
+`color` values: `violet` · `cyan` · `emerald` · `rose` · `amber` · `blue`
+
+**Response:**
+```json
+{ "event_id": "uuid" }
+```
+
+---
+
+#### GET /calendar/events?session_id=
+
+List all calendar events.
+
+**Response:**
+```json
+{
+  "events": [
+    {
+      "id": "uuid",
+      "title": "Team sync",
+      "start": "2026-04-15T09:00:00Z",
+      "end": "2026-04-15T10:00:00Z",
+      "all_day": false,
+      "description": "",
+      "location": "Zoom",
+      "color": "violet",
+      "created_at": "...",
+      "updated_at": "..."
+    }
+  ]
+}
+```
+
+---
+
+#### GET /calendar/event/{event_id}?session_id=
+
+Get a single event by ID.
+
+---
+
+#### PATCH /calendar/event/{event_id}
+
+Update event fields.
+
+**Request:** Any subset of event fields plus `session_id`.
+
+**Response:** `{ "updated": "uuid" }`
+
+---
+
+#### DELETE /calendar/event/{event_id}?session_id=
+
+Delete an event.
+
+**Response:** `{ "deleted": "uuid" }`
