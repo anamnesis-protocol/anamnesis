@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 export type AppView = 'connect' | 'onboard' | 'session'
+export type SuiteView = 'chat' | 'pass' | 'notes' | 'auth' | 'drive' | 'mail' | 'calendar' | 'knowledge'
 
 export interface SessionState {
   sessionId: string
@@ -35,6 +36,10 @@ interface AppStore {
   setActiveSection: (name: string) => void
   activeModel: string
   setActiveModel: (model: string) => void
+
+  // Suite navigation (within a session)
+  suiteView: SuiteView
+  setSuiteView: (v: SuiteView) => void
 }
 
 export const useAppStore = create<AppStore>()(
@@ -65,6 +70,9 @@ export const useAppStore = create<AppStore>()(
       setActiveSection: (activeSection) => set({ activeSection }),
       activeModel: '',
       setActiveModel: (activeModel) => set({ activeModel }),
+
+      suiteView: 'chat',
+      setSuiteView: (suiteView) => set({ suiteView }),
     }),
     {
       name: 'context-sovereignty-app',
