@@ -60,6 +60,7 @@ from api.routes.note_store import router as note_router
 from api.routes.totp_store import router as totp_router
 from api.routes.drive_store import router as drive_router
 from api.routes.mail_store import router as mail_router
+from api.routes.calendar_store import router as calendar_router
 
 app = FastAPI(
     title="Sovereign AI Context API",
@@ -102,6 +103,7 @@ app.include_router(note_router)
 app.include_router(totp_router)
 app.include_router(drive_router)
 app.include_router(mail_router)
+app.include_router(calendar_router)
 
 # Demo router (server-side signing, no wallet) — always registered.
 # /demo/sign and /demo/status require operator key; returns 503 if not configured.
