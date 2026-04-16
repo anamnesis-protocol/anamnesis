@@ -21,7 +21,7 @@ jobs:
             rust-target: x86_64-pc-windows-msvc
           - platform: macos-latest
             rust-target: aarch64-apple-darwin
-          - platform: macos-13-large
+          - platform: macos-13
             rust-target: x86_64-apple-darwin
           - platform: ubuntu-22.04
             rust-target: x86_64-unknown-linux-gnu
@@ -40,8 +40,6 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.rust-target }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -97,4 +95,3 @@ jobs:
             **First launch on Windows:** If SmartScreen appears, click "More info" → "Run anyway".
           releaseDraft: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || true }}
           prerelease: false
-          args: --target ${{ matrix.rust-target }}
