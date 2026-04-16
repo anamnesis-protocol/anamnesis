@@ -135,51 +135,71 @@ export default function SessionPage() {
         )}
       </div>
 
-      {/* Main layout: left nav + content */}
+      {/* Main layout: 3-column dashboard */}
       <div className="flex-1 flex min-h-0">
 
-        {/* Left sidebar nav */}
-        <nav className="flex flex-col gap-1 p-2 bg-surface-card border-r border-surface-border w-16 shrink-0">
-          {NAV_ITEMS.map(({ view, icon, label }) => (
-            <button
-              key={view}
-              onClick={() => setSuiteView(view)}
-              title={label}
-              className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-lg text-xs font-medium transition-colors ${
-                suiteView === view
-                  ? 'bg-brand/20 text-brand'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-              }`}
-            >
-              <span className="text-lg leading-none">{icon}</span>
-              <span className="text-[10px]">{label}</span>
-            </button>
-          ))}
-
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Vault / Skills */}
-          <button
-            onClick={() => setSuiteView('chat')}
-            title="Vault"
-            className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-lg text-xs font-medium transition-colors text-slate-400 hover:text-slate-200 hover:bg-white/5`}
-          >
-            <span className="text-lg leading-none">🧠</span>
-            <span className="text-[10px]">Vault</span>
-          </button>
-        </nav>
-
-        {/* Content area */}
+        {/* Chat view: 3-column dashboard layout */}
         {suiteView === 'chat' && (
           <>
-            {/* Chat */}
-            <div className="flex flex-col flex-1 min-w-0 border-r border-surface-border">
+            {/* Left Sidebar - Quick Nav */}
+            <div className="w-60 shrink-0 border-r border-surface-border overflow-y-auto p-4 space-y-4">
+              {/* Session Info */}
+              <div className="bg-surface-card border border-surface-border rounded-xl p-4 space-y-3">
+                <div className="flex items-center gap-2 text-slate-400 mb-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span className="text-xs font-medium text-white">Session Active</span>
+                </div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Expires</span>
+                    <span className="text-white font-mono">{expiresIn}m</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Health</span>
+                    <button
+                      onClick={() => setShowHealth(true)}
+                      className={`font-mono ${
+                        vaultOverall === 'healthy' ? 'text-emerald-400' :
+                        vaultOverall === 'degraded' ? 'text-amber-400' :
+                        vaultOverall === 'critical' ? 'text-red-400' :
+                        'text-slate-500'
+                      }`}
+                    >
+                      {healthLabel(vaultOverall)}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Nav */}
+              <div className="bg-surface-card border border-surface-border rounded-xl p-4">
+                <h3 className="text-xs font-medium text-white mb-3">Suite</h3>
+                <div className="space-y-1">
+                  {NAV_ITEMS.map(({ view, icon, label }) => (
+                    <button
+                      key={view}
+                      onClick={() => setSuiteView(view)}
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors ${
+                        suiteView === view
+                          ? 'bg-brand/20 text-brand'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                      }`}
+                    >
+                      <span className="text-base">{icon}</span>
+                      <span>{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Center - Chat */}
+            <div className="flex flex-col flex-1 min-w-0">
               <ChatPanel sessionId={session.sessionId} />
             </div>
 
-            {/* Right panel: vault + skills */}
-            <div className="hidden md:flex flex-col w-80 lg:w-96 shrink-0 min-h-0 overflow-hidden">
+            {/* Right Sidebar - Vault & Skills */}
+            <div className="w-80 shrink-0 border-l border-surface-border flex flex-col min-h-0 overflow-hidden">
               <div className="flex border-b border-surface-border bg-surface-card">
                 {(['vault', 'skills'] as RightTab[]).map((tab) => (
                   <button
