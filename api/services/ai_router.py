@@ -173,7 +173,7 @@ MODELS: dict[str, dict] = {
 #
 # This is the core routing intelligence of every Sovereign AI Context harness.
 # It evaluates the user's intent and maps it to the best available model so the
-# harness always steers the user toward the right tool for the job.
+# soul always steers the user toward the right tool for the job.
 # ---------------------------------------------------------------------------
 
 _TASK_PROFILES: dict[str, dict] = {
@@ -672,7 +672,8 @@ async def _stream_anthropic(
     )
 
     messages = list(history)
-    messages.append({"role": "user", "content": message})
+    if message.strip():
+        messages.append({"role": "user", "content": message})
 
     try:
         # Build request params
@@ -680,49 +681,53 @@ async def _stream_anthropic(
             "model": model_id,
             "system": system_prompt,
             "messages": messages,
-            "max_tokens": 2048,
+            "max_tokens": 4096,
         }
 
         # Add tools if provided
         if tools:
             params["tools"] = tools
 
+        # Accumulate tool_use blocks by index — input arrives as streaming JSON deltas
+        # and is only complete at content_block_stop. Emit once the block is done.
+        tool_blocks: dict[int, dict] = {}  # block_index -> {id, name, partial_json}
+
         async with client.messages.stream(**params) as stream:
             async for event in stream:
-                # Handle different event types
                 if event.type == "content_block_start":
                     block = event.content_block
                     if block.type == "tool_use":
-                        # Emit tool_use event to frontend
-                        yield _sse(
-                            event_type="tool_use",
-                            data={
-                                "tool_use_id": block.id,
-                                "tool_name": block.name,
-                                "tool_input": block.input,
-                            },
-                        )
+                        tool_blocks[event.index] = {
+                            "id": block.id,
+                            "name": block.name,
+                            "partial_json": "",
+                        }
+
                 elif event.type == "content_block_delta":
                     delta = event.delta
                     if delta.type == "text_delta":
-                        # Stream text content
                         yield _sse(delta.text)
                     elif delta.type == "input_json_delta":
-                        # Tool input is being streamed (we already sent tool_use event)
-                        pass
-                elif event.type == "message_stop":
-                    # Check if we need to wait for tool results
-                    final_message = await stream.get_final_message()
-                    if final_message.stop_reason == "tool_use":
-                        # Don't mark as done - frontend will send tool results
-                        yield _sse(
-                            event_type="tool_use_complete", data={"waiting_for_results": True}
-                        )
-                    else:
-                        # Normal completion
-                        yield _sse("", done=True)
+                        if event.index in tool_blocks:
+                            tool_blocks[event.index]["partial_json"] += delta.partial_json
 
-        # If we exited without tool_use, mark as done
+                elif event.type == "content_block_stop":
+                    # If this block was a tool_use, emit the complete event now
+                    if event.index in tool_blocks:
+                        tb = tool_blocks.pop(event.index)
+                        try:
+                            tool_input = (
+                                json.loads(tb["partial_json"]) if tb["partial_json"] else {}
+                            )
+                        except (json.JSONDecodeError, ValueError):
+                            tool_input = {}
+                        # Emit in the data: format the frontend SSE parser expects
+                        yield f'data: {json.dumps({"type": "tool_use", "id": tb["id"], "name": tb["name"], "input": tool_input})}\n\n'
+
+                elif event.type == "message_stop":
+                    yield _sse("", done=True)
+
+        # Fallback done in case message_stop event wasn't received
         yield _sse("", done=True)
     except Exception as exc:
         yield _sse(f"[ERROR] Anthropic: {exc}", done=True)

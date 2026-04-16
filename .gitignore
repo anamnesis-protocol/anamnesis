@@ -18,3 +18,4 @@ index/
 htmlcov/
 .coverage
 .cascade/
+scripts/demo_credentials.json

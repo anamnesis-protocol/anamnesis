@@ -39,7 +39,7 @@ _INFO_SECTION = b"sovereign-ai-section-v1"
 _INFO_INDEX = b"sovereign-ai-index-v1"
 
 # Sample context content
-_HARNESS_CONTENT = b"# HARNESS\nThis is the harness directives."
+_SOUL_CONTENT = b"# SOUL\nThis is the soul directives."
 _USER_CONTENT = b"# USER\nThis is the user profile."
 _CONFIG_CONTENT = b"# CONFIG\nThis is the AI configuration."
 _SESSION_CONTENT = b"# SESSION\nLast session: today."
@@ -89,13 +89,13 @@ def _make_encrypted_index(token_id: str, wallet_sig: bytes, section_file_ids: di
                             Returns (mock_get_contract, mock_get_file_id, mock_pull_index, mock_pull_section).
                             """
                             section_file_ids = {
-                                "harness": "0.0.100001",
+                                "soul": "0.0.100001",
                                 "user": "0.0.100002",
                                 "config": "0.0.100003",
                                 "session_state": "0.0.100004",
                             }
                             section_contents = {
-                                "harness": _HARNESS_CONTENT,
+                                "soul": _SOUL_CONTENT,
                                 "user": _USER_CONTENT,
                                 "config": _CONFIG_CONTENT,
                                 "session_state": _SESSION_CONTENT,
@@ -153,14 +153,13 @@ def _make_encrypted_index(token_id: str, wallet_sig: bytes, section_file_ids: di
                                     )
                                     data = resp.json()
                                     assert set(data["context_sections"].keys()) == {
-                                        "harness",
+                                        "soul",
                                         "user",
                                         "config",
                                         "session_state",
                                     }
                                     assert (
-                                        data["context_sections"]["harness"]
-                                        == _HARNESS_CONTENT.decode()
+                                        data["context_sections"]["soul"] == _SOUL_CONTENT.decode()
                                     )
 
                                     def test_happy_path_has_expiry(self, mocker):
@@ -179,7 +178,7 @@ def _make_encrypted_index(token_id: str, wallet_sig: bytes, section_file_ids: di
                                         def test_dir_bundles_excluded_from_context(self, mocker):
                                             """dir: prefixed sections must never appear in session context."""
                                             section_ids_with_dirs = {
-                                                "harness": "0.0.100001",
+                                                "soul": "0.0.100001",
                                                 "user": "0.0.100002",
                                                 "config": "0.0.100003",
                                                 "session_state": "0.0.100004",
@@ -187,7 +186,7 @@ def _make_encrypted_index(token_id: str, wallet_sig: bytes, section_file_ids: di
                                                 "dir:projects": "0.0.200002",
                                             }
                                             section_contents = {
-                                                "harness": _HARNESS_CONTENT,
+                                                "soul": _SOUL_CONTENT,
                                                 "user": _USER_CONTENT,
                                                 "config": _CONFIG_CONTENT,
                                                 "session_state": _SESSION_CONTENT,
@@ -307,7 +306,7 @@ def _make_encrypted_index(token_id: str, wallet_sig: bytes, section_file_ids: di
                                                                 mocker.patch(
                                                                     "api.routes.session.pull_index",
                                                                     return_value={
-                                                                        "harness": "0.0.100001",
+                                                                        "soul": "0.0.100001",
                                                                         "user": "0.0.100002",
                                                                         "config": "0.0.100003",
                                                                         "session_state": "0.0.100004",
@@ -345,7 +344,7 @@ def _make_encrypted_index(token_id: str, wallet_sig: bytes, section_file_ids: di
                                                                     mocker.patch(
                                                                         "api.routes.session.pull_index",
                                                                         return_value={
-                                                                            "harness": "0.0.100001"
+                                                                            "soul": "0.0.100001"
                                                                         },
                                                                     )
                                                                     mocker.patch(
@@ -449,7 +448,7 @@ def _make_encrypted_index(token_id: str, wallet_sig: bytes, section_file_ids: di
                                                                                     mocker.patch(
                                                                                         "api.routes.session.pull_index",
                                                                                         return_value={
-                                                                                            "harness": "0.0.100001",
+                                                                                            "soul": "0.0.100001",
                                                                                             "user": "0.0.100002",
                                                                                             "config": "0.0.100003",
                                                                                             "session_state": "0.0.100004",
@@ -457,7 +456,7 @@ def _make_encrypted_index(token_id: str, wallet_sig: bytes, section_file_ids: di
                                                                                     )
                                                                                     mocker.patch(
                                                                                         "api.routes.session.pull_section",
-                                                                                        return_value=_HARNESS_CONTENT,
+                                                                                        return_value=_SOUL_CONTENT,
                                                                                     )
                                                                                     mocker.patch(
                                                                                         "api.routes.session.log_event",

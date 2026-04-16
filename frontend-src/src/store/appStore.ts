@@ -66,7 +66,7 @@ export const useAppStore = create<AppStore>()(
         set((state) => ({ pendingEdits: { ...state.pendingEdits, [name]: content } })),
       clearPendingEdits: () => set({ pendingEdits: {} }),
 
-      activeSection: 'harness',
+      activeSection: 'soul',
       setActiveSection: (activeSection) => set({ activeSection }),
       activeModel: '',
       setActiveModel: (activeModel) => set({ activeModel }),

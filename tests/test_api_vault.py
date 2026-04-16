@@ -51,7 +51,7 @@ _INDEX_KEY = derive_key(TOKEN_ID, WALLET_SIG, info=_INFO_INDEX)
 def _make_session(session_id: str, extra_section_ids: dict | None = None) -> Session:
     """Insert a live session directly into the store (bypasses open flow)."""
     now = datetime.now(timezone.utc)
-    full_ids = {"harness": "0.0.1001", "user": "0.0.1002"}
+    full_ids = {"soul": "0.0.1001", "user": "0.0.1002"}
     if extra_section_ids:
         full_ids.update(extra_section_ids)
 
@@ -63,9 +63,9 @@ def _make_session(session_id: str, extra_section_ids: dict | None = None) -> Ses
             index_key=bytearray(_INDEX_KEY),
             index_file_id="0.0.9000",
             full_section_ids=full_ids,
-            start_hashes={"harness": "abc", "user": "def"},
-            sections_loaded=["harness", "user"],
-            context_sections={"harness": "# SOUL", "user": "# USER"},
+            start_hashes={"soul": "abc", "user": "def"},
+            sections_loaded=["soul", "user"],
+            context_sections={"soul": "# SOUL", "user": "# USER"},
             created_at=now,
             expires_at=now + timedelta(hours=4),
         )
@@ -296,7 +296,7 @@ def _make_session(session_id: str, extra_section_ids: dict | None = None) -> Ses
                                                                                 "bundles"
                                                                             ]
                                                                             assert (
-                                                                                "harness"
+                                                                                "soul"
                                                                                 not in bundles
                                                                             )
                                                                             assert (
@@ -547,7 +547,7 @@ def _make_upgrade_session(session_id: str, has_system: bool = False) -> Session:
     """Insert a session that is missing (or already has) the system section."""
     now = datetime.now(timezone.utc)
     full_ids: dict = {
-        "harness": "0.0.2001",
+        "soul": "0.0.2001",
         "user": "0.0.2002",
         "config": "0.0.2003",
         "session_state": "0.0.2004",

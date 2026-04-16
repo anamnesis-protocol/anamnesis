@@ -67,6 +67,7 @@ _active_session: dict[str, Any] = {}
 # Helper — call the FastAPI backend
 # ---------------------------------------------------------------------------
 
+
 def _api(method: str, path: str, **kwargs) -> dict:
     """Synchronous HTTP call to the FastAPI backend."""
     url = f"{API_BASE}{path}"
@@ -85,6 +86,7 @@ def _api(method: str, path: str, **kwargs) -> dict:
 # Static tools
 # ---------------------------------------------------------------------------
 
+
 @mcp.tool()
 def open_session(token_id: str, wallet_signature_hex: str) -> dict:
     """
@@ -101,12 +103,16 @@ def open_session(token_id: str, wallet_signature_hex: str) -> dict:
 
     Returns:
         session_id: Use this in all subsequent vault tool calls.
-        sections: The decrypted vault sections (harness, user, config, session_state).
+        sections: The decrypted vault sections (soul, user, config, session_state).
     """
-    data = _api("post", "/session/open", json={
-        "token_id": token_id,
-        "wallet_signature_hex": wallet_signature_hex,
-    })
+    data = _api(
+        "post",
+        "/session/open",
+        json={
+            "token_id": token_id,
+            "wallet_signature_hex": wallet_signature_hex,
+        },
+    )
 
     session_id = data["session_id"]
     _active_session["session_id"] = session_id
@@ -138,10 +144,14 @@ def close_session(session_id: str) -> dict:
     """
     pending_updates = _active_session.get("section_updates", {})
 
-    data = _api("post", "/session/close", json={
-        "session_id": session_id,
-        "updated_sections": pending_updates,
-    })
+    data = _api(
+        "post",
+        "/session/close",
+        json={
+            "session_id": session_id,
+            "updated_sections": pending_updates,
+        },
+    )
 
     # Clear local state
     _active_session.clear()
@@ -157,7 +167,7 @@ def get_vault_section(session_id: str, section_name: str) -> dict:
     """
     Read a specific vault section.
 
-    Available sections: harness, user, config, session_state.
+    Available sections: soul, user, config, session_state.
     Custom sections (if any) are also accessible.
 
     Args:
@@ -181,7 +191,7 @@ def update_vault_section(session_id: str, section_name: str, content: str) -> di
 
     Args:
         session_id: Active session UUID.
-        section_name: Section to update (harness, user, config, session_state).
+        section_name: Section to update (soul, user, config, session_state).
         content: New content for the section.
     """
     if _active_session.get("session_id") != session_id:
@@ -266,6 +276,7 @@ def save_skill_to_vault(
 # Dynamic skill tool loader
 # ---------------------------------------------------------------------------
 
+
 def _load_session_skills(session_id: str) -> list[dict]:
     """
     Load all skill tools from the vault for this session.
@@ -327,6 +338,7 @@ def register_session_skills(session_id: str) -> int:
 # MCP Resources
 # ---------------------------------------------------------------------------
 
+
 @mcp.resource("vault://session/{session_id}/sections")
 def get_session_sections(session_id: str) -> str:
     """All vault sections for this session as JSON."""
@@ -356,8 +368,12 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Sovereign AI Context MCP Server")
     parser.add_argument("--port", type=int, default=8001, help="Port to listen on")
-    parser.add_argument("--transport", default="stdio", choices=["stdio", "sse"],
-                        help="Transport: stdio (Claude Desktop) or sse (web)")
+    parser.add_argument(
+        "--transport",
+        default="stdio",
+        choices=["stdio", "sse"],
+        help="Transport: stdio (Claude Desktop) or sse (web)",
+    )
     args = parser.parse_args()
 
     print(f"Starting Sovereign AI Context MCP server (transport={args.transport})")

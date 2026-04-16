@@ -30,7 +30,12 @@ from fastapi import APIRouter, HTTPException, Request
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from src.vault import bundle_from_dict, unbundle_to_dict, push_section as _push_section, update_index as _update_index
+from src.vault import (
+    bundle_from_dict,
+    unbundle_to_dict,
+    push_section as _push_section,
+    update_index as _update_index,
+)
 from src.crypto import compress, decompress
 from src.context_storage import store_context, load_context, update_context
 from src.event_log import log_event
@@ -49,21 +54,22 @@ router = APIRouter(prefix="/vault", tags=["vault"])
 # Bundle name validation — alphanumeric, hyphens, underscores only, max 64 chars.
 # Prevents path traversal and keeps HFS section names clean.
 _BUNDLE_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9\-_]{0,62}[a-z0-9]$|^[a-z0-9]$")
-_MAX_FILES = 500                    # guard against oversized bundles
+_MAX_FILES = 500  # guard against oversized bundles
 _MAX_FILE_CONTENT_BYTES = 512 * 1024  # 512 KB per file (uncompressed)
 
 # Expected identity sections — used for completeness check
-_EXPECTED_SECTIONS = {"harness", "user", "config", "session_state", "system"}
+_EXPECTED_SECTIONS = {"soul", "user", "config", "session_state", "system"}
 
 # Context size thresholds (characters)
-_SIZE_EMPTY_THRESHOLD = 100          # below this → effectively empty
-_SIZE_LARGE_THRESHOLD = 50_000       # above this → warn (approaching model limits)
-_SIZE_CRITICAL_THRESHOLD = 200_000   # above this → will overflow most models
+_SIZE_EMPTY_THRESHOLD = 100  # below this → effectively empty
+_SIZE_LARGE_THRESHOLD = 50_000  # above this → warn (approaching model limits)
+_SIZE_CRITICAL_THRESHOLD = 200_000  # above this → will overflow most models
 
 
 # ---------------------------------------------------------------------------
 # Bundle helpers
 # ---------------------------------------------------------------------------
+
 
 def _validate_bundle_name(name: str) -> None:
     if not _BUNDLE_NAME_RE.match(name):
@@ -94,6 +100,7 @@ def _bundle_aad(full_name: str, token_id: str) -> bytes:
 # ---------------------------------------------------------------------------
 # POST /vault/bundle — push a named dir bundle
 # ---------------------------------------------------------------------------
+
 
 @router.post("/bundle", response_model=BundlePushResponse)
 @limiter.limit("20/minute")
@@ -190,6 +197,7 @@ def push_bundle(request: Request, req: BundlePushRequest) -> BundlePushResponse:
 # GET /vault/bundles — list bundle names in vault index
 # ---------------------------------------------------------------------------
 
+
 @router.get("/bundles", response_model=BundleListResponse)
 def list_bundles(session_id: str) -> BundleListResponse:
     """
@@ -217,6 +225,7 @@ def list_bundles(session_id: str) -> BundleListResponse:
 # ---------------------------------------------------------------------------
 # GET /vault/bundle/{bundle_name} — pull a specific bundle
 # ---------------------------------------------------------------------------
+
 
 @router.get("/bundle/{bundle_name}", response_model=BundlePullResponse)
 def pull_bundle(bundle_name: str, session_id: str) -> BundlePullResponse:
@@ -274,6 +283,7 @@ def pull_bundle(bundle_name: str, session_id: str) -> BundlePullResponse:
 # GET /vault/health — health check on the user's decrypted HFS vault
 # ---------------------------------------------------------------------------
 
+
 @router.get("/health")
 def vault_health(session_id: str) -> dict:
     """
@@ -312,8 +322,7 @@ def vault_health(session_id: str) -> dict:
     present = {name for name, content in sections.items() if content.strip()}
     missing = sorted(_EXPECTED_SECTIONS - present)
     empty = sorted(
-        name for name in _EXPECTED_SECTIONS
-        if name in sections and not sections[name].strip()
+        name for name in _EXPECTED_SECTIONS if name in sections and not sections[name].strip()
     )
     completeness_status = "pass"
     if missing:
@@ -350,12 +359,14 @@ def vault_health(session_id: str) -> dict:
             if size_status == "pass":
                 size_status = "warn"
             has_warning = True
-        size_issues.append({
-            "section": name,
-            "chars": char_count,
-            "tokens_estimate": token_estimate,
-            "issue": issue,
-        })
+        size_issues.append(
+            {
+                "section": name,
+                "chars": char_count,
+                "tokens_estimate": token_estimate,
+                "issue": issue,
+            }
+        )
     checks["size"] = {
         "status": size_status,
         "sections": size_issues,
@@ -366,7 +377,7 @@ def vault_health(session_id: str) -> dict:
     structure_status = "pass"
     for name in present:
         content = sections.get(name, "")
-        has_header = bool(re.search(r'^#{1,4}\s+\S', content, re.MULTILINE))
+        has_header = bool(re.search(r"^#{1,4}\s+\S", content, re.MULTILINE))
         has_content = len(content.strip()) > 50
         issues = []
         if not has_header:
@@ -388,9 +399,10 @@ def vault_health(session_id: str) -> dict:
     # Flags the vault as stale if no recent date is found — stale context means
     # the AI is working from an outdated picture of the user's state.
     from datetime import datetime, timezone as _tz
+
     _STALE_WARN_DAYS = 14
     _STALE_CRITICAL_DAYS = 30
-    _ISO_DATE_RE = re.compile(r'\b(20\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01]))\b')
+    _ISO_DATE_RE = re.compile(r"\b(20\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01]))\b")
 
     state_content = sections.get("session_state", "")
     found_dates = _ISO_DATE_RE.findall(state_content)
@@ -441,24 +453,33 @@ def vault_health(session_id: str) -> dict:
     # Each section has a role — check that it contains the structural elements
     # expected for that role. Missing metadata means the AI gets incomplete context.
     _SECTION_METADATA: dict[str, list[tuple[str, str]]] = {
-        "harness": [
-            (r'(?i)(directive|instruction|rule|you are|persona|identity|mission)', "identity/directive content"),
-            (r'^#{1,4}\s+\S', "at least one markdown header"),
+        "soul": [
+            (
+                r"(?i)(directive|instruction|rule|you are|persona|identity|mission)",
+                "identity/directive content",
+            ),
+            (r"^#{1,4}\s+\S", "at least one markdown header"),
         ],
         "user": [
-            (r'(?i)(name|role|prefer|goal|work|background|profession)', "user profile fields"),
-            (r'^#{1,4}\s+\S', "at least one markdown header"),
+            (r"(?i)(name|role|prefer|goal|work|background|profession)", "user profile fields"),
+            (r"^#{1,4}\s+\S", "at least one markdown header"),
         ],
         "config": [
-            (r'(?i)(model|provider|setting|config|prefer|tone|style|format|language)', "AI configuration fields"),
+            (
+                r"(?i)(model|provider|setting|config|prefer|tone|style|format|language)",
+                "AI configuration fields",
+            ),
         ],
         "session_state": [
-            (r'\b20\d{2}-\d{2}-\d{2}\b', "at least one date entry"),
-            (r'(?i)(session|last|active|current|working|project|status)', "session tracking content"),
+            (r"\b20\d{2}-\d{2}-\d{2}\b", "at least one date entry"),
+            (
+                r"(?i)(session|last|active|current|working|project|status)",
+                "session tracking content",
+            ),
         ],
         "system": [
-            (r'(?i)(vault|hedera|rag|mcp|skill|health)', "system capability content"),
-            (r'^#{1,4}\s+\S', "at least one markdown header"),
+            (r"(?i)(vault|hedera|rag|mcp|skill|health)", "system capability content"),
+            (r"^#{1,4}\s+\S", "at least one markdown header"),
         ],
     }
 
@@ -504,10 +525,12 @@ def vault_health(session_id: str) -> dict:
     for fp, sec_names in para_map.items():
         if len(sec_names) > 1 and fp not in seen_fps:
             seen_fps.add(fp)
-            duplicate_pairs.append({
-                "sections": sorted(set(sec_names)),
-                "preview": fp[:80] + ("..." if len(fp) > 80 else ""),
-            })
+            duplicate_pairs.append(
+                {
+                    "sections": sorted(set(sec_names)),
+                    "preview": fp[:80] + ("..." if len(fp) > 80 else ""),
+                }
+            )
 
     dupe_status = "warn" if duplicate_pairs else "pass"
     if duplicate_pairs:
@@ -519,7 +542,8 @@ def vault_health(session_id: str) -> dict:
         "note": (
             f"{len(duplicate_pairs)} paragraph(s) appear in multiple sections — "
             "remove duplicates to improve RAG precision and reduce token usage"
-            if duplicate_pairs else "no duplicate content detected"
+            if duplicate_pairs
+            else "no duplicate content detected"
         ),
     }
 
@@ -529,7 +553,7 @@ def vault_health(session_id: str) -> dict:
     # - No chunks are too large (> 1200 chars → precision loss; should have been split)
     # - Average chunk size is in the retrieval-effective range (150–800 chars)
     _CHUNK_MIN_CHARS = 50
-    _CHUNK_MAX_CHARS = 1200   # must match _MAX_CHUNK_CHARS in api/services/rag.py
+    _CHUNK_MAX_CHARS = 1200  # must match _MAX_CHUNK_CHARS in api/services/rag.py
     _CHUNK_IDEAL_MIN = 150
     _CHUNK_IDEAL_MAX = 800
     vault_index = session.vault_index
@@ -558,11 +582,17 @@ def vault_health(session_id: str) -> dict:
         rag_large = sum(1 for s in chunk_sizes if s > _CHUNK_MAX_CHARS)
         quality_issues = []
         if rag_tiny > 0:
-            quality_issues.append(f"{rag_tiny} chunk(s) under {_CHUNK_MIN_CHARS} chars — too small to retrieve meaningfully")
+            quality_issues.append(
+                f"{rag_tiny} chunk(s) under {_CHUNK_MIN_CHARS} chars — too small to retrieve meaningfully"
+            )
         if rag_large > 0:
-            quality_issues.append(f"{rag_large} chunk(s) over {_CHUNK_MAX_CHARS} chars — consider adding headers to split them")
+            quality_issues.append(
+                f"{rag_large} chunk(s) over {_CHUNK_MAX_CHARS} chars — consider adding headers to split them"
+            )
         if not (_CHUNK_IDEAL_MIN <= rag_avg_chars <= _CHUNK_IDEAL_MAX):
-            quality_issues.append(f"avg chunk size {rag_avg_chars} chars is outside ideal range {_CHUNK_IDEAL_MIN}–{_CHUNK_IDEAL_MAX}")
+            quality_issues.append(
+                f"avg chunk size {rag_avg_chars} chars is outside ideal range {_CHUNK_IDEAL_MIN}–{_CHUNK_IDEAL_MAX}"
+            )
         if quality_issues:
             rag_status = "warn"
             has_warning = True
@@ -583,7 +613,7 @@ def vault_health(session_id: str) -> dict:
     # session_state is auto-updated on every session close. If it keeps growing
     # unchecked it will eventually dominate the context window. Warn before it
     # becomes a problem so the user knows to summarise/prune it.
-    _STATE_WARN_CHARS = 8_000    # ~2k tokens — worth watching
+    _STATE_WARN_CHARS = 8_000  # ~2k tokens — worth watching
     _STATE_CRITICAL_CHARS = 20_000  # ~5k tokens — will crowd out other sections
     state_chars = len(sections.get("session_state", ""))
     state_token_est = state_chars // 4
@@ -593,7 +623,7 @@ def vault_health(session_id: str) -> dict:
         has_critical = True
         growth_note = (
             f"session_state is {state_chars:,} chars (~{state_token_est:,} tokens) — "
-            "summarise or prune old entries before it crowds out harness/user/config"
+            "summarise or prune old entries before it crowds out soul/user/config"
         )
     elif state_chars >= _STATE_WARN_CHARS:
         growth_status = "warn"
@@ -616,14 +646,12 @@ def vault_health(session_id: str) -> dict:
 
     # ── 9. HFS registry ───────────────────────────────────────────────────────
     identity_ids = {
-        k: v for k, v in session.full_section_ids.items()
+        k: v
+        for k, v in session.full_section_ids.items()
         if k in _EXPECTED_SECTIONS and isinstance(v, str)
     }
     registered = sorted(identity_ids.keys())
-    unregistered = sorted(
-        name for name in session.sections_loaded
-        if name not in identity_ids
-    )
+    unregistered = sorted(name for name in session.sections_loaded if name not in identity_ids)
     hfs_status = "warn" if unregistered else "pass"
     if unregistered:
         has_warning = True
@@ -654,6 +682,7 @@ def vault_health(session_id: str) -> dict:
 # ---------------------------------------------------------------------------
 # POST /vault/health/repair — apply auto-fixable repairs to the active session
 # ---------------------------------------------------------------------------
+
 
 @router.post("/health/repair")
 def vault_health_repair(session_id: str) -> dict:
@@ -706,40 +735,46 @@ def vault_health_repair(session_id: str) -> dict:
             session.vault_index = VaultIndex(chunks=[], bm25=None)
         new_count = session.vault_index.chunk_count
 
-        new_tiny = sum(
-            1 for c in session.vault_index._chunks
-            if len(c.text) < 50
-        ) if new_count > 0 else 0
+        new_tiny = (
+            sum(1 for c in session.vault_index._chunks if len(c.text) < 50) if new_count > 0 else 0
+        )
 
         if new_count == 0:
-            repairs.append({
-                "repair": "rag_index_rebuilt",
-                "status": "failed",
-                "chunks_before": old_count,
-                "chunks_after": 0,
-                "tiny_chunks_remaining": 0,
-                "note": "Rebuild returned empty index — vault sections may lack parseable structure",
-            })
+            repairs.append(
+                {
+                    "repair": "rag_index_rebuilt",
+                    "status": "failed",
+                    "chunks_before": old_count,
+                    "chunks_after": 0,
+                    "tiny_chunks_remaining": 0,
+                    "note": "Rebuild returned empty index — vault sections may lack parseable structure",
+                }
+            )
         else:
-            repairs.append({
-                "repair": "rag_index_rebuilt",
-                "status": "fixed" if new_tiny == 0 else "improved",
-                "chunks_before": old_count,
-                "chunks_after": new_count,
-                "tiny_chunks_remaining": new_tiny,
-                "note": (
-                    f"RAG index rebuilt — {new_count} chunks indexed"
-                    if new_tiny == 0
-                    else f"RAG index rebuilt — {new_count} chunks, {new_tiny} tiny chunk(s) remain"
-                ),
-            })
+            repairs.append(
+                {
+                    "repair": "rag_index_rebuilt",
+                    "status": "fixed" if new_tiny == 0 else "improved",
+                    "chunks_before": old_count,
+                    "chunks_after": new_count,
+                    "tiny_chunks_remaining": new_tiny,
+                    "note": (
+                        f"RAG index rebuilt — {new_count} chunks indexed"
+                        if new_tiny == 0
+                        else f"RAG index rebuilt — {new_count} chunks, {new_tiny} tiny chunk(s) remain"
+                    ),
+                }
+            )
     except Exception as exc:
         import traceback
-        repairs.append({
-            "repair": "rag_index_rebuilt",
-            "status": "failed",
-            "note": f"{type(exc).__name__}: {exc} | {traceback.format_exc().splitlines()[-2]}",
-        })
+
+        repairs.append(
+            {
+                "repair": "rag_index_rebuilt",
+                "status": "failed",
+                "note": f"{type(exc).__name__}: {exc} | {traceback.format_exc().splitlines()[-2]}",
+            }
+        )
 
     # ── Summary ───────────────────────────────────────────────────────────────
     fixed = [r for r in repairs if r["status"] == "fixed"]
@@ -765,6 +800,7 @@ def vault_health_repair(session_id: str) -> dict:
 # System section content — shared with provisioning (user.py)
 # ---------------------------------------------------------------------------
 
+
 def _system_section_content(token_id: str, created_at: str) -> bytes:
     """
     Generate the system capabilities section for a vault.
@@ -784,7 +820,7 @@ Nothing unencrypted ever touches a server at rest or in transit beyond your acti
 
 ## Vault Sections
 Five sections are loaded into every session:
-- **harness** — your AI's core directives, mission, and operating principles
+- **soul** — your AI's core directives, mission, and operating principles
 - **user** — your profile, preferences, background, and goals
 - **config** — AI name, tone, style, and response configuration
 - **session_state** — auto-updated after every session to carry forward what was worked on
@@ -836,12 +872,15 @@ Sessions are valid for 4 hours. Concurrent sessions for the same token are block
 prevent key collision. At close, changed sections are diffed against session-open hashes — only
 changed content is re-encrypted and pushed to Hedera. If a chat happened and session_state was not
 manually updated, a brief summary is auto-generated and written back to the vault.
-""".encode("utf-8")
+""".encode(
+        "utf-8"
+    )
 
 
 # ---------------------------------------------------------------------------
 # POST /vault/upgrade — add system section to vaults provisioned before it existed
 # ---------------------------------------------------------------------------
+
 
 @router.post("/upgrade")
 def vault_upgrade(session_id: str) -> dict:
@@ -868,7 +907,9 @@ def vault_upgrade(session_id: str) -> dict:
         )
 
     # Already upgraded — nothing to do.
-    if "system" in session.full_section_ids and isinstance(session.full_section_ids.get("system"), str):
+    if "system" in session.full_section_ids and isinstance(
+        session.full_section_ids.get("system"), str
+    ):
         return {
             "status": "already_present",
             "section": "system",
@@ -898,7 +939,8 @@ def vault_upgrade(session_id: str) -> dict:
         # ── Rebuild vault index with the new section ──────────────────────────
         _META_KEYS = {"_section_hashes"}
         clean_index = {
-            k: v for k, v in session.full_section_ids.items()
+            k: v
+            for k, v in session.full_section_ids.items()
             if k not in _META_KEYS and isinstance(v, str)
         }
         clean_index["system"] = file_id

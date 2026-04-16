@@ -153,7 +153,7 @@ class TestSessionLifecycleLocking:
         session = create_session(
             token_id=TOKEN_A,
             serial=1,
-            context_sections={"harness": b"hi"},
+            context_sections={"soul": b"hi"},
             section_key=FAKE_KEY,
             index_key=FAKE_KEY,
             index_file_id="0.0.idx",
@@ -165,7 +165,7 @@ class TestSessionLifecycleLocking:
         session = create_session(
             token_id=TOKEN_A,
             serial=1,
-            context_sections={"harness": b"hi"},
+            context_sections={"soul": b"hi"},
             section_key=FAKE_KEY,
             index_key=FAKE_KEY,
             index_file_id="0.0.idx",
@@ -178,7 +178,7 @@ class TestSessionLifecycleLocking:
         create_session(
             token_id=TOKEN_A,
             serial=1,
-            context_sections={"harness": b"hi"},
+            context_sections={"soul": b"hi"},
             section_key=FAKE_KEY,
             index_key=FAKE_KEY,
             index_file_id="0.0.idx",
@@ -188,7 +188,7 @@ class TestSessionLifecycleLocking:
             create_session(
                 token_id=TOKEN_A,
                 serial=2,
-                context_sections={"harness": b"hi"},
+                context_sections={"soul": b"hi"},
                 section_key=FAKE_KEY,
                 index_key=FAKE_KEY,
                 index_file_id="0.0.idx",
@@ -199,7 +199,7 @@ class TestSessionLifecycleLocking:
         session = create_session(
             token_id=TOKEN_A,
             serial=1,
-            context_sections={"harness": b"some content"},
+            context_sections={"soul": b"some content"},
             section_key=FAKE_KEY,
             index_key=FAKE_KEY,
             index_file_id="0.0.idx",
@@ -214,7 +214,7 @@ class TestSessionLifecycleLocking:
         session = create_session(
             token_id=TOKEN_A,
             serial=1,
-            context_sections={"harness": b"secret content"},
+            context_sections={"soul": b"secret content"},
             section_key=FAKE_KEY,
             index_key=FAKE_KEY,
             index_file_id="0.0.idx",

@@ -58,7 +58,7 @@ _INFO_SECTION = b"sovereign-ai-section-v1"
 _INFO_INDEX = b"sovereign-ai-index-v1"
 
 # Identity section names to create at provision time
-_PROVISION_SECTIONS = ["harness", "user", "config", "session_state", "system", "credentials"]
+_PROVISION_SECTIONS = ["soul", "user", "config", "session_state", "system", "credentials"]
 
 router = APIRouter(prefix="/user", tags=["user"])
 
@@ -66,6 +66,7 @@ router = APIRouter(prefix="/user", tags=["user"])
 # ---------------------------------------------------------------------------
 # Default vault content templates
 # ---------------------------------------------------------------------------
+
 
 def _system_section_content(token_id: str, created_at: str) -> bytes:
     """
@@ -86,7 +87,7 @@ Nothing unencrypted ever touches a server at rest or in transit beyond your acti
 
 ## Vault Sections
 Five sections are loaded into every session:
-- **harness** — your AI's core directives, mission, and operating principles
+- **soul** — your AI's core directives, mission, and operating principles
 - **user** — your profile, preferences, background, and goals
 - **config** — AI name, tone, style, and response configuration
 - **session_state** — auto-updated after every session to carry forward what was worked on
@@ -138,7 +139,9 @@ Sessions are valid for 4 hours. Concurrent sessions for the same token are block
 prevent key collision. At close, changed sections are diffed against session-open hashes — only
 changed content is re-encrypted and pushed to Hedera. If a chat happened and session_state was not
 manually updated, a brief summary is auto-generated and written back to the vault.
-""".encode("utf-8")
+""".encode(
+        "utf-8"
+    )
 
 
 def _create_hedera_account() -> tuple[str, str]:
@@ -149,9 +152,11 @@ def _create_hedera_account() -> tuple[str, str]:
     """
     from hiero_sdk_python import AccountCreateTransaction, PrivateKey, Hbar
     from hiero_sdk_python.hapi.services import response_code_pb2 as _rc
+
     _SUCCESS_CODE = _rc.SUCCESS
 
     from src.config import get_client, get_treasury
+
     client = get_client()
     _, treasury_key = get_treasury()
 
@@ -187,19 +192,20 @@ def _default_sections(
     These are starting templates — the user customizes them post-provision.
     """
     return {
-        "harness": f"""# Harness Directives
+        "soul": f"""# Soul Directives
 
 **Token:** {token_id}
 **Account:** {account_id}
 **Created:** {created_at}
 
-This is the core of your AI harness — the directives and principles that define
+This is the core of your AI soul — the directives and principles that define
 how your AI operates. Customize it to set your AI's mission, values, and ground rules.
 You're in command. This is how you tell AI who it's working for and what matters.
 
 [Status: NEW — awaiting customization]
-""".encode("utf-8"),
-
+""".encode(
+            "utf-8"
+        ),
         "user": f"""# User Profile
 
 **Account:** {account_id}
@@ -211,8 +217,9 @@ Add your preferences, communication style, background, and goals.
 The more you put in, the better AI understands how to serve you.
 
 [Status: NEW — awaiting customization]
-""".encode("utf-8"),
-
+""".encode(
+            "utf-8"
+        ),
         "config": f"""# AI Configuration
 
 **Name:** {companion_name}
@@ -221,11 +228,12 @@ The more you put in, the better AI understands how to serve you.
 
 This defines how your AI thinks, speaks, and responds.
 Customize it to set the tone, expertise, and working style you want.
-You built this harness — your AI follows it.
+You built this soul — your AI follows it.
 
 [Status: NEW — awaiting customization]
-""".encode("utf-8"),
-
+""".encode(
+            "utf-8"
+        ),
         "session_state": f"""# Session State
 
 **Last Updated:** {created_at}
@@ -236,10 +244,10 @@ Updated after each session. Tracks what was worked on and what comes next —
 so your AI picks up exactly where you left off.
 
 [Status: NEW — no sessions yet]
-""".encode("utf-8"),
-
+""".encode(
+            "utf-8"
+        ),
         "system": _system_section_content(token_id, created_at),
-
         "credentials": (
             f"""# Hedera Credentials
 
@@ -255,8 +263,8 @@ This is your Hedera account private key — store it somewhere safe outside this
 It controls your Hedera account ({account_id}).
 Your vault encryption is separate and protected by your passphrase.
 """
-            if private_key_hex else
-            f"""# Hedera Credentials
+            if private_key_hex
+            else f"""# Hedera Credentials
 
 **Account:** {account_id}
 **Token:** {token_id}
@@ -271,6 +279,7 @@ You connected your own Hedera account. Your private key is managed by your walle
 # ---------------------------------------------------------------------------
 # /user/provision/start
 # ---------------------------------------------------------------------------
+
 
 @router.post("/provision/start", response_model=ProvisionStartResponse)
 def provision_start(req: ProvisionStartRequest) -> ProvisionStartResponse:
@@ -327,6 +336,7 @@ def provision_start(req: ProvisionStartRequest) -> ProvisionStartResponse:
 # ---------------------------------------------------------------------------
 # /user/provision/complete
 # ---------------------------------------------------------------------------
+
 
 @router.post("/provision/complete", response_model=ProvisionCompleteResponse)
 def provision_complete(req: ProvisionCompleteRequest) -> ProvisionCompleteResponse:
@@ -465,6 +475,7 @@ def provision_complete(req: ProvisionCompleteRequest) -> ProvisionCompleteRespon
 # /user/{token_id}/status
 # ---------------------------------------------------------------------------
 
+
 @router.get("/{token_id}/status", response_model=UserStatusResponse)
 def user_status(token_id: str) -> UserStatusResponse:
     """
@@ -502,6 +513,7 @@ def user_status(token_id: str) -> UserStatusResponse:
 # DELETE /user/vault — delete all HFS files for a vault
 # ---------------------------------------------------------------------------
 
+
 @router.delete("/vault", response_model=VaultDeleteResponse)
 def delete_vault(req: VaultDeleteRequest) -> VaultDeleteResponse:
     """
@@ -526,6 +538,7 @@ def delete_vault(req: VaultDeleteRequest) -> VaultDeleteResponse:
 
     # Evict any active session for this token before deleting
     from api.session_store import get_lock_holder, close_session as _close_session
+
     existing = get_lock_holder(token_id)
     if existing:
         _close_session(existing)
@@ -566,7 +579,8 @@ def delete_vault(req: VaultDeleteRequest) -> VaultDeleteResponse:
     # Collect all file IDs to delete (sections + index)
     _META_KEYS = {"_section_hashes"}
     file_ids_to_delete = [
-        fid for key, fid in section_ids.items()
+        fid
+        for key, fid in section_ids.items()
         if key not in _META_KEYS and isinstance(fid, str) and fid
     ]
     file_ids_to_delete.append(index_file_id)

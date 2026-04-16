@@ -85,7 +85,7 @@ def _ensure_user_keys(session: Session) -> None:
 
 class ChatMessage(BaseModel):
     role: str = Field(description="'user' or 'assistant'")
-    content: str
+    content: str | list  # str for normal turns, list for tool_use/tool_result content arrays
 
 
 class ChatRequest(BaseModel):
@@ -115,14 +115,14 @@ class ChatRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 _SECTION_LABELS = {
-    "harness": "HARNESS DIRECTIVES",
+    "soul": "SOUL DIRECTIVES",
     "user": "USER PROFILE",
     "config": "AI CONFIGURATION",
     "session_state": "SESSION CONTEXT",
     "knowledge": "KNOWLEDGE BASE",
 }
 
-_SECTION_ORDER = ["harness", "user", "config", "session_state", "knowledge"]
+_SECTION_ORDER = ["soul", "user", "config", "session_state", "knowledge"]
 
 
 def build_system_prompt(
@@ -166,20 +166,20 @@ def build_system_prompt(
         "You are an AI companion operating under a user-defined sovereign harness. "
         "Your identity, directives, and context are owned exclusively by your user — "
         "encrypted, stored on Hedera Hashgraph, and decrypted only with their cryptographic signature. "
-        "No platform can read or alter this harness without the user's key. "
+        "No platform can read or alter this soul without the user's key. "
         "The human is in command. Execute their directives as configured below.",
         "",
         context_note,
         "",
     ]
 
-    # ---- Harness: always inject in full ----
-    harness = context_sections.get("harness", "").strip()
-    if harness:
-        lines += ["=== HARNESS DIRECTIVES ===", harness, ""]
+    # ---- Soul: always inject in full ----
+    soul = context_sections.get("soul", "").strip()
+    if soul:
+        lines += ["=== SOUL DIRECTIVES ===", soul, ""]
 
     # ---- Remaining sections: RAG-gated or full fallback ----
-    non_harness = {k: v for k, v in context_sections.items() if k != "harness"}
+    non_soul = {k: v for k, v in context_sections.items() if k != "soul"}
     rag_used = False
 
     if vault_index is not None and vault_index.chunk_count > 0 and query.strip():
@@ -195,14 +195,14 @@ def build_system_prompt(
         # Full injection: canonical order for known sections, then any extras
         injected: set[str] = set()
         for section_name in _SECTION_ORDER:
-            if section_name == "harness":
+            if section_name == "soul":
                 continue  # already injected above
-            content = non_harness.get(section_name, "").strip()
+            content = non_soul.get(section_name, "").strip()
             if content:
                 label = _SECTION_LABELS.get(section_name, section_name.upper())
                 lines += [f"=== {label} ===", content, ""]
                 injected.add(section_name)
-        for section_name, content in non_harness.items():
+        for section_name, content in non_soul.items():
             if section_name not in injected and content.strip():
                 lines += [f"=== {section_name.upper()} ===", content.strip(), ""]
 
@@ -395,11 +395,21 @@ async def chat_message(req: ChatRequest):
         raise HTTPException(status_code=400, detail=str(exc))
 
     if not req.message.strip():
-        raise HTTPException(status_code=400, detail="Message cannot be empty.")
+        # Allow empty message when the last history entry is a tool_result turn
+        # (the agentic loop sends tool results in history with message="")
+        last = req.history[-1] if req.history else None
+        is_tool_result_turn = (
+            last is not None
+            and last.role == "user"
+            and isinstance(last.content, list)
+            and any(isinstance(c, dict) and c.get("type") == "tool_result" for c in last.content)
+        )
+        if not is_tool_result_turn:
+            raise HTTPException(status_code=400, detail="Message cannot be empty.")
 
     # ---- Build system prompt — RAG-gated context retrieval ----
     # vault_index was built at session open from the decrypted vault content.
-    # Only chunks relevant to this specific message are injected (harness always full).
+    # Only chunks relevant to this specific message are injected (soul always full).
     system_prompt = build_system_prompt(
         context_sections=session.context_sections,
         model_id=req.model,

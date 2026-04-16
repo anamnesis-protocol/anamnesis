@@ -50,9 +50,9 @@ if os.environ.get("SOVEREIGN_ENV") == "testnet":
         "VAULT_SECTIONS_JSON",
         _json.dumps(
             {
-                "harness": "Knowledge/SOUL.md",
+                "soul": "Knowledge/SOUL.md",
                 "user": "Personas/USER.md",
-                "config": "Personas/Symbiote.md",
+                "config": "Personas/Companion.md",
                 "session_state": "System/Session-State.md",
             }
         ),

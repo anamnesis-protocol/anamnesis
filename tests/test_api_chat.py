@@ -36,7 +36,7 @@ def _make_session(user_id: str = "", user_api_keys=None) -> MagicMock:
     session.user_id = user_id
     session.user_api_keys = user_api_keys
     session.context_sections = {
-        "harness": "I am your AI assistant.",
+        "soul": "I am your AI assistant.",
         "user": "Name: Test User",
         "config": "Be helpful.",
         "session_state": "Last session: test",
@@ -301,7 +301,7 @@ class TestBuildSystemPrompt:
         prompt = build_system_prompt(
             context_sections={
                 "session_state": "state",
-                "harness": "harness",
+                "soul": "soul",
                 "user": "user",
                 "config": "cfg",
             },
@@ -332,7 +332,7 @@ class TestBuildSystemPrompt:
         from api.routes.chat import build_system_prompt
 
         prompt = build_system_prompt(
-            {"harness": "soul text", "custom_section": "custom content"},
+            {"soul": "soul text", "custom_section": "custom content"},
             "gpt-4o",
             "0.0.1234",
         )

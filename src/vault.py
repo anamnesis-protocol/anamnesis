@@ -18,7 +18,7 @@ Security improvements (book-derived):
 Vault sections (Phase 1):
 soul -> Knowledge/SOUL.md
 user -> Personas/USER.md
-symbiote -> Personas/Symbiote.md
+symbiote -> Personas/Companion.md
 session_state -> System/Session-State.md
 
 Usage:
@@ -63,7 +63,7 @@ VAULT_SECTIONS: dict[str, str] = (
     json.loads(_sections_override)
     if _sections_override
     else {
-        "harness": "harness.md",
+        "soul": "soul.md",
         "user": "user.md",
         "config": "config.md",
         "session_state": "session_state.md",

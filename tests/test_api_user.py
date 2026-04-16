@@ -19,7 +19,7 @@ PASSPHRASE = "correct-horse-battery-staple"
 INDEX_FILE_ID = "0.0.88888"
 
 SECTION_FILE_IDS = {
-    "harness": "0.0.200001",
+    "soul": "0.0.200001",
     "user": "0.0.200002",
     "config": "0.0.200003",
     "session_state": "0.0.200004",
@@ -140,7 +140,7 @@ class TestProvisionComplete:
         data = resp.json()
         assert data["token_id"] == TOKEN_ID
         assert set(data["sections_pushed"]) == {
-            "harness",
+            "soul",
             "user",
             "config",
             "session_state",
@@ -161,7 +161,7 @@ class TestProvisionComplete:
             },
         )
         assert set(resp.json()["sections_pushed"]) == {
-            "harness",
+            "soul",
             "user",
             "config",
             "session_state",

@@ -58,7 +58,7 @@ _INFO_SECTION = b"sovereign-ai-section-v1"
 _INFO_INDEX = b"sovereign-ai-index-v1"
 
 # Identity section names — only these are delivered in the session context
-_IDENTITY_SECTIONS = {"harness", "user", "config", "session_state", "system", "knowledge"}
+_IDENTITY_SECTIONS = {"soul", "user", "config", "session_state", "system", "knowledge"}
 
 router = APIRouter(prefix="/session", tags=["session"])
 

@@ -2,7 +2,7 @@
  * OnboardPage — first-time onboarding chat.
  *
  * After a new vault is provisioned and session is open, the AI guides the user
- * through customizing their harness/user/config sections.
+ * through customizing their soul/user/config sections.
  * The user can skip and go straight to the main session view.
  */
 import { useAppStore } from '../store/appStore'

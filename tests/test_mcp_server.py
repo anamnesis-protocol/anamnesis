@@ -52,32 +52,32 @@ class TestUpdateVaultSection:
         _active_session["session_id"] = FAKE_SESSION_ID
         _active_session["section_updates"] = {}
 
-        result = update_vault_section(FAKE_SESSION_ID, "harness", "new directives")
+        result = update_vault_section(FAKE_SESSION_ID, "soul", "new directives")
 
         assert result["queued"] is True
-        assert result["section_name"] == "harness"
-        assert _active_session["section_updates"]["harness"] == "new directives"
+        assert result["section_name"] == "soul"
+        assert _active_session["section_updates"]["soul"] == "new directives"
 
     def test_wrong_session_raises(self):
         _active_session["session_id"] = "other-session"
 
         with pytest.raises(ValueError, match="No active session"):
-            update_vault_section(FAKE_SESSION_ID, "harness", "content")
+            update_vault_section(FAKE_SESSION_ID, "soul", "content")
 
     def test_no_active_session_raises(self):
         # _active_session is empty
         with pytest.raises((ValueError, KeyError)):
-            update_vault_section(FAKE_SESSION_ID, "harness", "content")
+            update_vault_section(FAKE_SESSION_ID, "soul", "content")
 
     def test_multiple_sections_queued(self):
         _active_session["session_id"] = FAKE_SESSION_ID
         _active_session["section_updates"] = {}
 
-        update_vault_section(FAKE_SESSION_ID, "harness", "val1")
+        update_vault_section(FAKE_SESSION_ID, "soul", "val1")
         update_vault_section(FAKE_SESSION_ID, "user", "val2")
 
         assert _active_session["section_updates"] == {
-            "harness": "val1",
+            "soul": "val1",
             "user": "val2",
         }
 

@@ -37,7 +37,7 @@ _MAX_CHUNK_CHARS = 1200
 
 # Sections always injected in full — never chunked or filtered by RAG.
 # Harness is the AI's identity and directives: it must always be complete.
-_ALWAYS_FULL_SECTIONS = {"harness"}
+_ALWAYS_FULL_SECTIONS = {"soul"}
 
 # Minimum BM25 score to include a chunk (0.0 = include any non-zero match)
 _MIN_SCORE = 0.0

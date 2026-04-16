@@ -9,7 +9,7 @@ Implements the "relevance-gated memory package loading" concept from the patent:
 
 Four memory layer mapping:
 short-term -> active context window (not stored here)
-long-term -> Phase 1: SOUL.md, USER.md, Symbiote.md (vault.py)
+long-term -> Phase 1: SOUL.md, USER.md, Companion.md (vault.py)
 episodic -> session archives (category="sessions")
 semantic -> research + projects (category="research" | "projects")
 
