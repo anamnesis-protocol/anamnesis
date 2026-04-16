@@ -308,7 +308,7 @@ class TestBuildSystemPrompt:
             model_id="gpt-4o",
             token_id="0.0.1234",
         )
-        soul_pos = prompt.index("=== HARNESS DIRECTIVES ===")
+        soul_pos = prompt.index("=== SOUL DIRECTIVES ===")
         user_pos = prompt.index("=== USER PROFILE ===")
         cfg_pos = prompt.index("=== AI CONFIGURATION ===")
         state_pos = prompt.index("=== SESSION CONTEXT ===")
@@ -325,7 +325,7 @@ class TestBuildSystemPrompt:
         from api.routes.chat import build_system_prompt
 
         prompt = build_system_prompt({}, "gpt-4o", "0.0.1234")
-        assert "=== HARNESS DIRECTIVES ===" not in prompt
+        assert "=== SOUL DIRECTIVES ===" not in prompt
 
     def test_unknown_sections_appended_at_end(self):
         """Unknown section names get added with their name uppercased."""
