@@ -289,6 +289,8 @@ The core architecture is the subject of three US provisional patent applications
 
 ## License
 
-Apache License 2.0 — see LICENSE file for details.
+**Copyright © 2026 Arty Fitchel's LLC. All Rights Reserved.**
 
-This license includes explicit patent grant provisions protecting both contributors and users.
+This software is proprietary and confidential. See [LICENSE](LICENSE) for details.
+
+**Patent Notice:** This software implements inventions covered by pending US patent applications.
