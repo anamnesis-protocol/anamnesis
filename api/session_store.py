@@ -69,6 +69,9 @@ class Session:
     # Cleared (VaultIndex.clear()) at session close alongside the crypto keys.
     # Type: VaultIndex | None — import deferred to avoid circular dependency.
     vault_index: object | None = None
+    # Vault schema version — read from vault index at open, bumped by migrations.
+    # Written back to Hedera at session close if migrations ran.
+    schema_version: str = "1.0"
 
     @property
     def expired(self) -> bool:
@@ -176,9 +179,8 @@ def create_session(
         created_at=now,
         expires_at=now + timedelta(hours=SESSION_TTL_HOURS),
         user_id=user_id,
-        # user_api_keys: None = demo/testnet (env fallback)
-        # {} will be set after first Supabase lookup for real users
         user_api_keys=None,
+        schema_version=str(full_section_ids.get("_schema_version", "1.0")),
     )
     _store[session.session_id] = session
     # Acquire vault lock — one active session per token_id

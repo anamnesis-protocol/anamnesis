@@ -19,6 +19,7 @@ No ML models. No disk writes. No API calls.
 Uses BM25Okapi from rank-bm25 (pure Python, zero native deps).
 """
 
+import math
 import re
 from dataclasses import dataclass
 from typing import Optional
@@ -36,11 +37,156 @@ except ImportError:
 _MAX_CHUNK_CHARS = 1200
 
 # Sections always injected in full — never chunked or filtered by RAG.
-# Harness is the AI's identity and directives: it must always be complete.
+# Soul is the AI's identity and directives: it must always be complete.
 _ALWAYS_FULL_SECTIONS = {"soul"}
 
 # Minimum BM25 score to include a chunk (0.0 = include any non-zero match)
 _MIN_SCORE = 0.0
+
+# ---------------------------------------------------------------------------
+# Bayesian re-ranking
+# ---------------------------------------------------------------------------
+# Adapts the bayesian.py logic from symbiote-rag/ to work with vault section
+# names (soul/user/config/session_state/knowledge/dir:*) instead of file paths.
+# This runs server-side on every chat turn — all users benefit automatically.
+
+_INTENT_PATTERNS: dict[str, list[str]] = {
+    "status": [
+        r"\bstatus\b",
+        r"\bbacklog\b",
+        r"\bopen (tasks?|items?|work)\b",
+        r"\bwhat'?s? (done|pending|open|current|active|next|left)\b",
+        r"\b(is|are) .{0,30} (done|complete|working|live|up|finished)\b",
+        r"\bwhat (are we|should (we|i)) (work|do|build)\w*\b",
+        r"\bwhat.{0,20}(working on|next)\b",
+        r"\bprogress\b",
+    ],
+    "historical": [
+        r"\blast session\b",
+        r"\byesterday\b",
+        r"\bprevious(ly)?\b",
+        r"\bwhen did\b",
+        r"\bwhat did\b",
+        r"\bremember when\b",
+        r"\b(weeks?|months?|days?) ago\b",
+    ],
+    "knowledge": [
+        r"\bhow (do|does|to|can|should)\b",
+        r"\bwhat is\b",
+        r"\bexplain\b",
+        r"\bdescribe\b",
+        r"\bwhy does\b",
+        r"\bbest practice\b",
+        r"\barchitecture\b",
+        r"\bpattern\b",
+    ],
+}
+
+_DEFAULT_PRIOR = 0.40
+
+# P(useful | intent, section_name) — tuned for vault section semantics.
+# dir:* bundles (project dirs) are treated as high-prior for project/status.
+_SECTION_PRIORS: dict[str, dict[str, float]] = {
+    "status": {
+        "session_state": 0.95,
+        "user": 0.65,
+        "knowledge": 0.50,
+        "config": 0.35,
+        "soul": 0.30,
+    },
+    "historical": {
+        "session_state": 0.85,
+        "user": 0.55,
+        "knowledge": 0.45,
+        "config": 0.30,
+        "soul": 0.25,
+    },
+    "knowledge": {
+        "knowledge": 0.92,
+        "config": 0.75,
+        "user": 0.65,
+        "session_state": 0.40,
+        "soul": 0.50,
+    },
+}
+
+# Sections to always include in the candidate pool for certain intents,
+# regardless of BM25 score. session_state is authoritative for status queries.
+_PINNED_SECTIONS: dict[str, list[str]] = {
+    "status": ["session_state"],
+    "historical": ["session_state"],
+}
+
+
+def _classify_intent(query: str) -> list[str]:
+    q = query.lower()
+    matched = [
+        intent
+        for intent, patterns in _INTENT_PATTERNS.items()
+        if any(re.search(p, q) for p in patterns)
+    ]
+    return matched or ["knowledge"]
+
+
+def _section_prior(section: str, intents: list[str]) -> float:
+    """Return the best source prior across all active intents for this section."""
+    # dir:* bundles count as project/status context
+    canonical = section if not section.startswith("dir:") else "session_state"
+    best = _DEFAULT_PRIOR
+    for intent in intents:
+        prior = _SECTION_PRIORS.get(intent, {}).get(canonical, _DEFAULT_PRIOR)
+        best = max(best, prior)
+    return best
+
+
+def _bayesian_rerank(
+    query: str,
+    chunks: list["VaultChunk"],
+    bm25_scores: list[float],
+    top_k: int,
+) -> list["VaultChunk"]:
+    """
+    Re-rank BM25 candidates using intent-aware section priors.
+
+    Fetches a 3x candidate pool from BM25, injects pinned sections at the
+    pool median score, then applies:
+        final = bm25 * (1 + source_boost)
+    where source_boost = (prior - default_prior) / default_prior.
+    """
+    pool_size = top_k * 3
+    intents = _classify_intent(query)
+
+    # Build initial candidate pool from BM25
+    ranked_idx = sorted(range(len(bm25_scores)), key=lambda i: bm25_scores[i], reverse=True)
+    pool: list[tuple[float, "VaultChunk"]] = []
+    for i in ranked_idx[:pool_size]:
+        if bm25_scores[i] > _MIN_SCORE:
+            pool.append((bm25_scores[i], chunks[i]))
+
+    # Pin authoritative sections at pool median
+    pinned_names = set()
+    for intent in intents:
+        pinned_names.update(_PINNED_SECTIONS.get(intent, []))
+
+    if pinned_names and pool:
+        import statistics
+
+        median_score = statistics.median(s for s, _ in pool)
+        pool_sections = {c.section for _, c in pool}
+        for chunk in chunks:
+            if chunk.section in pinned_names and chunk.section not in pool_sections:
+                pool.append((median_score, chunk))
+
+    # Apply Bayesian re-scoring
+    rescored: list[tuple[float, "VaultChunk"]] = []
+    for bm25, chunk in pool:
+        prior = _section_prior(chunk.section, intents)
+        boost = (prior - _DEFAULT_PRIOR) / _DEFAULT_PRIOR
+        final = bm25 * (1.0 + boost)
+        rescored.append((final, chunk))
+
+    rescored.sort(key=lambda x: x[0], reverse=True)
+    return [chunk for _, chunk in rescored[:top_k]]
 
 
 @dataclass
@@ -73,8 +219,11 @@ class VaultIndex:
         """
         Return up to top_k chunks most relevant to the query.
 
+        Uses Bayesian re-ranking: intent classification + section priors +
+        session_state pinning for status queries. Falls back to BM25-only if
+        re-ranking produces no results.
+
         Returns an empty list if the index is empty or rank-bm25 is not installed.
-        Callers should fall back to full-section injection on empty results.
         """
         if not self._bm25 or not self._chunks:
             return []
@@ -82,8 +231,7 @@ class VaultIndex:
         if not tokens:
             return []
         scores = self._bm25.get_scores(tokens)
-        ranked = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
-        return [self._chunks[i] for i in ranked[:top_k] if scores[i] > min_score]
+        return _bayesian_rerank(query, self._chunks, list(scores), top_k)
 
     def clear(self) -> None:
         """Destroy index content — called at session close alongside key zeroing."""

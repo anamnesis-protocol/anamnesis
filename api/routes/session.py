@@ -275,6 +275,31 @@ def open_session(
         user_id=user_id,
     )
 
+    # ---- Vault schema migration — non-destructive, runs before RAG build ----
+    # Checks _schema_version in the vault index. If behind CURRENT_SCHEMA_VERSION,
+    # adds missing sections (e.g. knowledge) with default content and pushes them
+    # to HFS. The updated index is written back to Hedera at session close.
+    try:
+        from api.services.vault_migration import run_migrations
+
+        migrations_ran = run_migrations(session)
+        if migrations_ran:
+            # Write updated index immediately so the new file IDs are durable
+            # even if the session closes unexpectedly.
+            from src.vault import update_index
+
+            update_index(
+                session.index_file_id,
+                {
+                    **{k: v for k, v in session.full_section_ids.items() if not k.startswith("_")},
+                    "_schema_version": session.schema_version,
+                },
+                bytes(session.index_key),
+                session.token_id,
+            )
+    except Exception:
+        pass  # Non-fatal — session proceeds with current structure
+
     # ---- Build in-memory RAG index from decrypted vault content ----
     # BM25Okapi is imported here (not inside rag.py) to avoid a sys.path ordering
     # issue where rank_bm25 is not yet resolvable at rag.py module init time.
@@ -402,8 +427,8 @@ def close_session_endpoint(req: SessionCloseRequest) -> SessionCloseResponse:
             for name, content in changed.items():
                 new_hashes[name] = hashlib.sha256(content).hexdigest()
 
-            # Build clean index (no metadata keys)
-            _META_KEYS = {"_section_hashes"}
+            # Build clean index (no metadata keys except schema_version)
+            _META_KEYS = {"_section_hashes", "_schema_version"}
             clean_index = {
                 k: v
                 for k, v in session.full_section_ids.items()
@@ -412,7 +437,7 @@ def close_session_endpoint(req: SessionCloseRequest) -> SessionCloseResponse:
 
             update_index(
                 index_file_id=session.index_file_id,
-                index=clean_index,
+                index={**clean_index, "_schema_version": session.schema_version},
                 key=index_key_bytes,
                 token_id=token_id,
                 section_hashes=new_hashes,
@@ -486,7 +511,7 @@ def close_session_endpoint(req: SessionCloseRequest) -> SessionCloseResponse:
                             )
                             new_hashes = dict(session.start_hashes)
                             new_hashes["session_state"] = new_hash
-                            _META_KEYS = {"_section_hashes"}
+                            _META_KEYS = {"_section_hashes", "_schema_version"}
                             clean_index = {
                                 k: v
                                 for k, v in session.full_section_ids.items()
@@ -494,7 +519,10 @@ def close_session_endpoint(req: SessionCloseRequest) -> SessionCloseResponse:
                             }
                             update_index(
                                 index_file_id=session.index_file_id,
-                                index=clean_index,
+                                index={
+                                    **clean_index,
+                                    "_schema_version": session.schema_version,
+                                },
                                 key=index_key_bytes,
                                 token_id=token_id,
                                 section_hashes=new_hashes,
