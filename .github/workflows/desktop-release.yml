@@ -76,10 +76,10 @@ jobs:
           # TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           projectPath: frontend-src
-          tagName: ${{ github.ref_name }}
-          releaseName: 'Arty Fitchel''s ${{ github.ref_name }}'
+          tagName: desktop-v0.1.0
+          releaseName: 'Arty Fitchels Desktop v0.1.0'
           releaseBody: |
-            ## Arty Fitchel's Desktop
+            ## Arty Fitchels Desktop v0.1.0
 
             Download the installer for your platform:
 
@@ -93,5 +93,6 @@ jobs:
             **First launch on macOS:** If you see "unidentified developer", right-click the app → Open → Open. This will be resolved once code signing is set up.
 
             **First launch on Windows:** If SmartScreen appears, click "More info" → "Run anyway".
-          releaseDraft: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || true }}
+          releaseDraft: false
           prerelease: false
+          releaseId: ${{ github.event.inputs.release_id || '' }}

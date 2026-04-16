@@ -8,7 +8,7 @@
     "withGlobalTauri": false
   },
   "package": {
-    "productName": "Arty Fitchel's",
+    "productName": "Arty Fitchels",
     "version": "0.1.0"
   },
   "tauri": {
@@ -58,7 +58,7 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "title": "Arty Fitchel's",
+        "title": "Arty Fitchels",
         "width": 1200,
         "height": 800,
         "minWidth": 900,
