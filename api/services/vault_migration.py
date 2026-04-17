@@ -74,14 +74,10 @@ def _migrate_1_0_to_1_1(session: "Session") -> list[str]:
     if "knowledge" not in session.full_section_ids:
         try:
             from src.vault import push_section as _push_section
-            from src.crypto import derive_key
 
-            # Derive the section key the same way session open does
-            section_key = derive_key(
-                session.token_id,
-                session.wallet_sig,
-                info=b"sovereign-ai-section-v1",
-            )
+            # section_key is already derived at session open — reuse it directly.
+            # bytearray → bytes so push_section's type annotation is satisfied.
+            section_key = bytes(session.section_key)
             default_content = _MIGRATION_DEFAULTS["knowledge"].encode("utf-8")
             file_id = _push_section(
                 "knowledge",
