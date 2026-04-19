@@ -4,7 +4,7 @@ pass_store.py — SAC-Pass: Token-Gated Password Manager
 Architecture:
   - Password vault = encrypted JSON stored on Hedera HFS
   - Key = HKDF(token_id + wallet_sig, info=b"sovereign-ai-pass-v1")
-  - Vault index file_id cached locally in .pass_index.json
+  - Vault index file_id stored in Supabase (profiles.vault_file_ids) with local cache fallback
   - No master password. No company holds keys. Proof of token ownership = access.
 
 Vault JSON structure (plaintext before encryption):
@@ -27,24 +27,20 @@ Vault JSON structure (plaintext before encryption):
 The entire JSON blob is encrypted as one unit before HFS storage.
 """
 
-import hashlib
 import json
 import uuid
 from datetime import datetime, timezone
-from pathlib import Path
 
-from src.config import get_client, get_validator_contract_id
-from src.crypto import derive_key, encrypt_context, decrypt_context, compress, decompress
+from src.crypto import derive_key, compress, decompress
 from src.context_storage import store_context, load_context, update_context
 from src.vault import get_wallet_signature
 from src.event_log import log_event
+from src.vault_index_store import get_service_data, set_service_data
 
 # Purpose-separated key — never reuses vault or drive keys
 _INFO_PASS = b"sovereign-ai-pass-v1"
 _AAD_PASS = b"sac-pass-vault-v1"
-
-# Local cache for pass vault file_id
-_PASS_INDEX_CACHE = Path(__file__).parent.parent / ".pass_index.json"
+_SERVICE = "pass"
 
 
 # ---------------------------------------------------------------------------
@@ -58,23 +54,6 @@ def get_pass_key(token_id: str) -> bytes:
 
 
 # ---------------------------------------------------------------------------
-# Local cache helpers
-# ---------------------------------------------------------------------------
-
-
-def _load_pass_cache() -> dict:
-    if not _PASS_INDEX_CACHE.exists():
-        return {}
-    with open(_PASS_INDEX_CACHE, encoding="utf-8") as f:
-        return json.load(f)
-
-
-def _save_pass_cache(data: dict) -> None:
-    with open(_PASS_INDEX_CACHE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-
-
-# ---------------------------------------------------------------------------
 # Vault operations
 # ---------------------------------------------------------------------------
 
@@ -84,10 +63,10 @@ def init_vault(token_id: str) -> str:
     Create a new empty password vault on HFS.
     Returns the HFS file_id of the vault.
     """
-    cache = _load_pass_cache()
-    if cache.get(token_id):
+    existing = get_service_data(token_id, _SERVICE)
+    if existing:
         raise RuntimeError(
-            f"Pass vault already exists at {cache[token_id]}. " "Use get_vault() to access it."
+            f"Pass vault already exists at {existing}. Use get_vault() to access it."
         )
 
     key = get_pass_key(token_id)
@@ -101,8 +80,7 @@ def init_vault(token_id: str) -> str:
     payload = compress(plaintext)
     file_id = store_context(key, payload, token_id, _AAD_PASS)
 
-    cache[token_id] = file_id
-    _save_pass_cache(cache)
+    set_service_data(token_id, _SERVICE, file_id)
 
     log_event("PASS_VAULT_CREATED", {"token_id": token_id, "file_id": file_id})
     print(f"[sac-pass] Vault created on HFS: {file_id}")
@@ -111,8 +89,7 @@ def init_vault(token_id: str) -> str:
 
 def get_vault(token_id: str) -> dict:
     """Fetch, decrypt, and return the password vault as a dict."""
-    cache = _load_pass_cache()
-    file_id = cache.get(token_id)
+    file_id = get_service_data(token_id, _SERVICE)
     if not file_id:
         raise RuntimeError("No pass vault found. Run init_vault() first.")
 
@@ -124,8 +101,7 @@ def get_vault(token_id: str) -> dict:
 
 def _save_vault(token_id: str, vault: dict) -> None:
     """Encrypt and push updated vault back to HFS."""
-    cache = _load_pass_cache()
-    file_id = cache[token_id]
+    file_id = get_service_data(token_id, _SERVICE)
     key = get_pass_key(token_id)
 
     plaintext = json.dumps(vault, indent=2).encode("utf-8")

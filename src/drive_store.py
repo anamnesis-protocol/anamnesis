@@ -6,7 +6,7 @@ Architecture:
   - Drive index (file manifest) stored encrypted on HFS
   - Key = HKDF(token_id + wallet_sig, info=b"sovereign-ai-drive-v1")
   - AAD binds each file ciphertext to its filename + token (prevents swapping)
-  - Index file_id cached locally in .drive_index.json
+  - Index file_id stored in Supabase (profiles.vault_file_ids) with local cache fallback
 
 File size limits:
   - HFS max: 1,024 KB per file
@@ -37,16 +37,16 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from src.crypto import derive_key, encrypt_context, decrypt_context, compress, decompress
+from src.crypto import derive_key, compress, decompress
 from src.context_storage import store_context, load_context, update_context
 from src.vault import get_wallet_signature
 from src.event_log import log_event
+from src.vault_index_store import get_service_data, set_service_data
 
 _INFO_DRIVE = b"sovereign-ai-drive-v1"
 _AAD_DRIVE_IDX = b"sac-drive-index-v1"
 _HFS_MAX_BYTES = 1_024 * 1_024  # 1 MB hard limit per HFS file
-
-_DRIVE_INDEX_CACHE = Path(__file__).parent.parent / ".drive_index.json"
+_SERVICE = "drive"
 
 
 # ---------------------------------------------------------------------------
@@ -65,33 +65,16 @@ def _file_aad(filename: str, token_id: str) -> bytes:
 
 
 # ---------------------------------------------------------------------------
-# Index cache helpers
-# ---------------------------------------------------------------------------
-
-
-def _load_drive_cache() -> dict:
-    if not _DRIVE_INDEX_CACHE.exists():
-        return {}
-    with open(_DRIVE_INDEX_CACHE, encoding="utf-8") as f:
-        return json.load(f)
-
-
-def _save_drive_cache(data: dict) -> None:
-    with open(_DRIVE_INDEX_CACHE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-
-
-# ---------------------------------------------------------------------------
 # Drive initialization
 # ---------------------------------------------------------------------------
 
 
 def init_drive(token_id: str) -> str:
     """Create a new empty drive index on HFS. Returns index file_id."""
-    cache = _load_drive_cache()
-    if cache.get(token_id, {}).get("index_file_id"):
+    existing = get_service_data(token_id, _SERVICE)
+    if existing and existing.get("index_file_id"):
         raise RuntimeError(
-            f"Drive already exists at {cache[token_id]['index_file_id']}. "
+            f"Drive already exists at {existing['index_file_id']}. "
             "Use list_files() to browse it."
         )
 
@@ -101,18 +84,15 @@ def init_drive(token_id: str) -> str:
     plaintext = json.dumps(index, indent=2).encode("utf-8")
     file_id = store_context(key, plaintext, token_id, _AAD_DRIVE_IDX)
 
-    if token_id not in cache:
-        cache[token_id] = {}
-    cache[token_id]["index_file_id"] = file_id
-    _save_drive_cache(cache)
+    set_service_data(token_id, _SERVICE, {"index_file_id": file_id})
     log_event("DRIVE_INITIALIZED", {"token_id": token_id, "index_file_id": file_id})
     print(f"[sac-drive] Drive index created on HFS: {file_id}")
     return file_id
 
 
 def _get_index(token_id: str) -> dict:
-    cache = _load_drive_cache()
-    file_id = cache.get(token_id, {}).get("index_file_id")
+    data = get_service_data(token_id, _SERVICE)
+    file_id = (data or {}).get("index_file_id")
     if not file_id:
         raise RuntimeError("Drive not initialized. Run init_drive() first.")
     key = get_drive_key(token_id)
@@ -121,8 +101,8 @@ def _get_index(token_id: str) -> dict:
 
 
 def _save_index(token_id: str, index: dict) -> None:
-    cache = _load_drive_cache()
-    file_id = cache[token_id]["index_file_id"]
+    data = get_service_data(token_id, _SERVICE)
+    file_id = (data or {}).get("index_file_id")
     key = get_drive_key(token_id)
     raw = json.dumps(index, indent=2).encode("utf-8")
     update_context(key, file_id, raw, token_id, _AAD_DRIVE_IDX)

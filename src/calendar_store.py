@@ -4,7 +4,7 @@ calendar_store.py — SAC-Calendar: Token-Gated Encrypted Calendar
 Architecture:
   - Calendar vault = encrypted JSON stored on Hedera HFS
   - Key = HKDF(token_id + wallet_sig, info=b"sovereign-ai-calendar-v1")
-  - Vault index file_id cached locally in .calendar_index.json
+  - Vault index file_id stored in Supabase (profiles.vault_file_ids) with local cache fallback
   - No master password. Proof of token ownership = access.
 
 Vault JSON structure (plaintext before encryption):
@@ -32,20 +32,17 @@ The entire JSON blob is encrypted as one unit before HFS storage.
 import json
 import uuid
 from datetime import datetime, timezone
-from pathlib import Path
 
-from src.config import get_client, get_validator_contract_id
-from src.crypto import derive_key, encrypt_context, decrypt_context, compress, decompress
+from src.crypto import derive_key, compress, decompress
 from src.context_storage import store_context, load_context, update_context
 from src.vault import get_wallet_signature
 from src.event_log import log_event
+from src.vault_index_store import get_service_data, set_service_data
 
 # Purpose-separated key — never reuses vault, pass, drive, or mail keys
 _INFO_CALENDAR = b"sovereign-ai-calendar-v1"
 _AAD_CALENDAR = b"sac-calendar-vault-v1"
-
-# Local cache for calendar vault file_id
-_CALENDAR_INDEX_CACHE = Path(__file__).parent.parent / ".calendar_index.json"
+_SERVICE = "calendar"
 
 
 # ---------------------------------------------------------------------------
@@ -59,23 +56,6 @@ def get_calendar_key(token_id: str) -> bytes:
 
 
 # ---------------------------------------------------------------------------
-# Local cache helpers
-# ---------------------------------------------------------------------------
-
-
-def _load_calendar_cache() -> dict:
-    if not _CALENDAR_INDEX_CACHE.exists():
-        return {}
-    with open(_CALENDAR_INDEX_CACHE, encoding="utf-8") as f:
-        return json.load(f)
-
-
-def _save_calendar_cache(data: dict) -> None:
-    with open(_CALENDAR_INDEX_CACHE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-
-
-# ---------------------------------------------------------------------------
 # Vault operations
 # ---------------------------------------------------------------------------
 
@@ -85,10 +65,10 @@ def init_vault(token_id: str) -> str:
     Create a new empty calendar vault on HFS.
     Returns the HFS file_id of the vault.
     """
-    cache = _load_calendar_cache()
-    if cache.get(token_id):
+    existing = get_service_data(token_id, _SERVICE)
+    if existing:
         raise RuntimeError(
-            f"Calendar vault already exists at {cache[token_id]}. " "Use get_vault() to access it."
+            f"Calendar vault already exists at {existing}. Use get_vault() to access it."
         )
 
     key = get_calendar_key(token_id)
@@ -102,8 +82,7 @@ def init_vault(token_id: str) -> str:
     payload = compress(plaintext)
     file_id = store_context(key, payload, token_id, _AAD_CALENDAR)
 
-    cache[token_id] = file_id
-    _save_calendar_cache(cache)
+    set_service_data(token_id, _SERVICE, file_id)
 
     log_event("CALENDAR_VAULT_CREATED", {"token_id": token_id, "file_id": file_id})
     print(f"[sac-calendar] Vault created on HFS: {file_id}")
@@ -112,8 +91,7 @@ def init_vault(token_id: str) -> str:
 
 def get_vault(token_id: str) -> dict:
     """Fetch, decrypt, and return the calendar vault as a dict."""
-    cache = _load_calendar_cache()
-    file_id = cache.get(token_id)
+    file_id = get_service_data(token_id, _SERVICE)
     if not file_id:
         raise RuntimeError("No calendar vault found. Run init_vault() first.")
 
@@ -125,8 +103,7 @@ def get_vault(token_id: str) -> dict:
 
 def _save_vault(token_id: str, vault: dict) -> None:
     """Encrypt and push updated vault back to HFS."""
-    cache = _load_calendar_cache()
-    file_id = cache[token_id]
+    file_id = get_service_data(token_id, _SERVICE)
     key = get_calendar_key(token_id)
 
     plaintext = json.dumps(vault, indent=2).encode("utf-8")
