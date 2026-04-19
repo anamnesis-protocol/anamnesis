@@ -85,9 +85,9 @@ def init_vault(token_id: str) -> str:
     Returns the HFS file_id of the vault.
     """
     cache = _load_pass_cache()
-    if cache.get("file_id"):
+    if cache.get(token_id):
         raise RuntimeError(
-            f"Pass vault already exists at {cache['file_id']}. " "Use get_vault() to access it."
+            f"Pass vault already exists at {cache[token_id]}. " "Use get_vault() to access it."
         )
 
     key = get_pass_key(token_id)
@@ -101,7 +101,8 @@ def init_vault(token_id: str) -> str:
     payload = compress(plaintext)
     file_id = store_context(key, payload, token_id, _AAD_PASS)
 
-    _save_pass_cache({"token_id": token_id, "file_id": file_id})
+    cache[token_id] = file_id
+    _save_pass_cache(cache)
 
     log_event("PASS_VAULT_CREATED", {"token_id": token_id, "file_id": file_id})
     print(f"[sac-pass] Vault created on HFS: {file_id}")
@@ -111,7 +112,7 @@ def init_vault(token_id: str) -> str:
 def get_vault(token_id: str) -> dict:
     """Fetch, decrypt, and return the password vault as a dict."""
     cache = _load_pass_cache()
-    file_id = cache.get("file_id")
+    file_id = cache.get(token_id)
     if not file_id:
         raise RuntimeError("No pass vault found. Run init_vault() first.")
 
@@ -124,7 +125,7 @@ def get_vault(token_id: str) -> dict:
 def _save_vault(token_id: str, vault: dict) -> None:
     """Encrypt and push updated vault back to HFS."""
     cache = _load_pass_cache()
-    file_id = cache["file_id"]
+    file_id = cache[token_id]
     key = get_pass_key(token_id)
 
     plaintext = json.dumps(vault, indent=2).encode("utf-8")

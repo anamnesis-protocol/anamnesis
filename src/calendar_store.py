@@ -86,9 +86,9 @@ def init_vault(token_id: str) -> str:
     Returns the HFS file_id of the vault.
     """
     cache = _load_calendar_cache()
-    if cache.get("file_id"):
+    if cache.get(token_id):
         raise RuntimeError(
-            f"Calendar vault already exists at {cache['file_id']}. " "Use get_vault() to access it."
+            f"Calendar vault already exists at {cache[token_id]}. " "Use get_vault() to access it."
         )
 
     key = get_calendar_key(token_id)
@@ -102,7 +102,8 @@ def init_vault(token_id: str) -> str:
     payload = compress(plaintext)
     file_id = store_context(key, payload, token_id, _AAD_CALENDAR)
 
-    _save_calendar_cache({"token_id": token_id, "file_id": file_id})
+    cache[token_id] = file_id
+    _save_calendar_cache(cache)
 
     log_event("CALENDAR_VAULT_CREATED", {"token_id": token_id, "file_id": file_id})
     print(f"[sac-calendar] Vault created on HFS: {file_id}")
@@ -112,7 +113,7 @@ def init_vault(token_id: str) -> str:
 def get_vault(token_id: str) -> dict:
     """Fetch, decrypt, and return the calendar vault as a dict."""
     cache = _load_calendar_cache()
-    file_id = cache.get("file_id")
+    file_id = cache.get(token_id)
     if not file_id:
         raise RuntimeError("No calendar vault found. Run init_vault() first.")
 
@@ -125,7 +126,7 @@ def get_vault(token_id: str) -> dict:
 def _save_vault(token_id: str, vault: dict) -> None:
     """Encrypt and push updated vault back to HFS."""
     cache = _load_calendar_cache()
-    file_id = cache["file_id"]
+    file_id = cache[token_id]
     key = get_calendar_key(token_id)
 
     plaintext = json.dumps(vault, indent=2).encode("utf-8")

@@ -102,6 +102,8 @@ def pass_list_entries(session_id: str = Query(...)):
         entries = list_entries(token_id)
     except RuntimeError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to load vault: {exc}")
     return {"entries": entries}
 
 

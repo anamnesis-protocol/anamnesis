@@ -89,9 +89,10 @@ def _save_drive_cache(data: dict) -> None:
 def init_drive(token_id: str) -> str:
     """Create a new empty drive index on HFS. Returns index file_id."""
     cache = _load_drive_cache()
-    if cache.get("index_file_id"):
+    if cache.get(token_id, {}).get("index_file_id"):
         raise RuntimeError(
-            f"Drive already exists at {cache['index_file_id']}. " "Use list_files() to browse it."
+            f"Drive already exists at {cache[token_id]['index_file_id']}. "
+            "Use list_files() to browse it."
         )
 
     key = get_drive_key(token_id)
@@ -100,7 +101,10 @@ def init_drive(token_id: str) -> str:
     plaintext = json.dumps(index, indent=2).encode("utf-8")
     file_id = store_context(key, plaintext, token_id, _AAD_DRIVE_IDX)
 
-    _save_drive_cache({"token_id": token_id, "index_file_id": file_id})
+    if token_id not in cache:
+        cache[token_id] = {}
+    cache[token_id]["index_file_id"] = file_id
+    _save_drive_cache(cache)
     log_event("DRIVE_INITIALIZED", {"token_id": token_id, "index_file_id": file_id})
     print(f"[sac-drive] Drive index created on HFS: {file_id}")
     return file_id
@@ -108,7 +112,7 @@ def init_drive(token_id: str) -> str:
 
 def _get_index(token_id: str) -> dict:
     cache = _load_drive_cache()
-    file_id = cache.get("index_file_id")
+    file_id = cache.get(token_id, {}).get("index_file_id")
     if not file_id:
         raise RuntimeError("Drive not initialized. Run init_drive() first.")
     key = get_drive_key(token_id)
@@ -118,7 +122,7 @@ def _get_index(token_id: str) -> dict:
 
 def _save_index(token_id: str, index: dict) -> None:
     cache = _load_drive_cache()
-    file_id = cache["index_file_id"]
+    file_id = cache[token_id]["index_file_id"]
     key = get_drive_key(token_id)
     raw = json.dumps(index, indent=2).encode("utf-8")
     update_context(key, file_id, raw, token_id, _AAD_DRIVE_IDX)

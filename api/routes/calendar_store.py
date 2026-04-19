@@ -105,6 +105,8 @@ def calendar_list_events(session_id: str = Query(...)):
         events = list_events(token_id)
     except RuntimeError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to load calendar: {exc}")
     return {"events": events}
 
 
@@ -125,6 +127,8 @@ def calendar_add_event(req: AddEventRequest):
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to save event: {exc}")
     return {"event_id": event_id}
 
 
