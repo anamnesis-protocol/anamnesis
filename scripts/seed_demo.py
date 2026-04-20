@@ -19,18 +19,24 @@ Usage:
     python scripts/seed_demo.py --dry-run  (validate connectivity only)
 
 Requirements:
-    pip install requests
-    .env must be configured with OPERATOR_ID, OPERATOR_KEY, VALIDATOR_CONTRACT_ID
+    pip install requests supabase
+    .env must be configured with OPERATOR_ID, OPERATOR_KEY, VALIDATOR_CONTRACT_ID,
+    SUPABASE_URL, SUPABASE_SERVICE_KEY
 """
 
 import argparse
 import io
 import json
+import os
 import sys
 import time
+import uuid
 from pathlib import Path
 
 import requests
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 # ---------------------------------------------------------------------------
 # Demo content
@@ -190,6 +196,79 @@ Non-provisional deadline: 2027-03-16.
 
 
 # ---------------------------------------------------------------------------
+# Supabase helpers
+# ---------------------------------------------------------------------------
+
+# Demo login credentials — used to create the Supabase auth user
+DEMO_EMAIL = "demo@artyfitchels.app"
+DEMO_PASSWORD = "Artie2026Demo!"
+
+
+def _supabase_admin():
+    """Return Supabase admin client using service role key."""
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_SERVICE_KEY")
+    if not url or not key:
+        fail("SUPABASE_URL or SUPABASE_SERVICE_KEY not set in .env")
+    from supabase import create_client
+
+    return create_client(url, key)
+
+
+def create_supabase_user() -> str:
+    """
+    Create (or retrieve) the demo Supabase auth user.
+    Returns the user UUID — used to link companion_token_id to the profile row.
+    """
+    step("Creating Supabase auth user")
+    sb = _supabase_admin()
+    try:
+        # Try to create — if already exists, look it up
+        result = sb.auth.admin.create_user(
+            {
+                "email": DEMO_EMAIL,
+                "password": DEMO_PASSWORD,
+                "email_confirm": True,
+            }
+        )
+        user_id = result.user.id
+        ok()
+        return user_id
+    except Exception as e:
+        err_str = str(e)
+        if "already been registered" in err_str or "already exists" in err_str:
+            # User exists — look up by email
+            users = sb.auth.admin.list_users()
+            for u in users:
+                if hasattr(u, "email") and u.email == DEMO_EMAIL:
+                    ok()
+                    return u.id
+            fail(f"User exists but could not be found: {e}")
+        fail(f"Supabase user creation failed: {e}")
+
+
+def link_token_to_profile(user_id: str, token_id: str) -> None:
+    """
+    Write companion_token_id to the profiles row for this user.
+    Also resets vault_file_ids to {} so services reinitialize with the new token's keys.
+    (Prevents stale file_ids from a previous seed run causing decrypt failures.)
+    """
+    step("Linking token to Supabase profile")
+    sb = _supabase_admin()
+    try:
+        sb.table("profiles").upsert(
+            {
+                "id": user_id,
+                "companion_token_id": token_id,
+                "vault_file_ids": {},
+            }
+        ).execute()
+        ok()
+    except Exception as e:
+        fail(f"Profile link failed: {e}")
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -323,8 +402,9 @@ def seed_pass(base_url: str, session_id: str) -> None:
     step("Seeding Pass (3 entries)")
     try:
         _post(base_url, "/pass/init", {"session_id": session_id})
-    except RuntimeError:
-        pass  # already inited is fine
+    except RuntimeError as e:
+        if "409" not in str(e):
+            fail(f"pass/init failed: {e}")
 
     entries = [
         {
@@ -364,8 +444,9 @@ def seed_calendar(base_url: str, session_id: str) -> None:
     step("Seeding Calendar (3 events)")
     try:
         _post(base_url, "/calendar/init", {"session_id": session_id})
-    except RuntimeError:
-        pass
+    except RuntimeError as e:
+        if "409" not in str(e):
+            fail(f"calendar/init failed: {e}")
 
     events = [
         {
@@ -428,8 +509,9 @@ def seed_drive(base_url: str, session_id: str) -> None:
     step("Seeding Drive (2 files)")
     try:
         _post(base_url, "/drive/init", {"session_id": session_id})
-    except RuntimeError:
-        pass
+    except RuntimeError as e:
+        if "409" not in str(e):
+            fail(f"drive/init failed: {e}")
 
     files = [
         (
@@ -472,35 +554,14 @@ Hire agent for claims drafting only: ~$1,500–$3,500 vs. $8k–$15k full servic
 
 
 def seed_mail(base_url: str, session_id: str, token_id: str) -> None:
-    step("Seeding Mail (1 welcome message)")
+    step("Initializing Mail inbox")
     try:
         _post(base_url, "/mail/init", {"session_id": session_id})
-    except RuntimeError:
-        pass
-
-    try:
-        _post(
-            base_url,
-            "/mail/send",
-            {
-                "session_id": session_id,
-                "to_token_id": token_id,  # self-mail for demo
-                "subject": "Welcome to Arty Fitchels — Your Sovereign AI Companion",
-                "body": (
-                    "Your encrypted vault is live on Hedera Hashgraph.\n\n"
-                    "This message — like everything in Arty Fitchels — is stored encrypted "
-                    "on a decentralized public ledger. Only your passphrase can decrypt it. "
-                    "Not us. Not Hedera. Nobody.\n\n"
-                    "Your AI companion (Artie) has been configured with your profile, "
-                    "preferences, and current goals. Every session picks up exactly where "
-                    "you left off — across any AI model you choose.\n\n"
-                    "You just went from renting your AI to owning it.\n\n"
-                    "— The Arty Fitchels Team"
-                ),
-            },
-        )
     except RuntimeError as e:
-        fail(str(e))
+        if "409" not in str(e):
+            fail(f"mail/init failed: {e}")
+    # Note: self-send is blocked by the API. Inbox intentionally empty for demo —
+    # the Loom script demonstrates sending between accounts, not pre-seeded messages.
     ok()
 
 
@@ -551,6 +612,14 @@ def main() -> None:
     token_id, account_id = provision(base_url)
     print()
 
+    # Step 1b: Create Supabase auth user + link token to profile
+    # This is required so vault_index_store can persist service file_ids to Supabase.
+    # (Normal frontend flow does this via /api/provision/complete Next.js proxy.)
+    print("Step 1b: Supabase auth + profile")
+    user_id = create_supabase_user()
+    link_token_to_profile(user_id, token_id)
+    print()
+
     # Step 2: Seed suite data
     # We need an open session for each suite operation, but Pass/Drive/Mail/Calendar/Knowledge
     # all call init themselves. We'll open one session, do all suite seeds, then
@@ -589,13 +658,14 @@ def main() -> None:
     print("  • Pass: 3 entries (Gmail, Chase, LinkedIn)")
     print("  • Calendar: 3 upcoming events (VC call, patent review, launch)")
     print("  • Drive: 2 files (one-pager, patent strategy notes)")
-    print("  • Mail: 1 welcome message")
+    print("  • Mail: inbox initialized (empty — self-send blocked by API)")
     print("  • Knowledge: product one-pager indexed into AI context")
     print()
     print("  To use this account:")
     print(f"  1. Go to artyfitchels.vercel.app")
-    print(f"  2. Enter token ID: {token_id}")
-    print(f"  3. Enter passphrase: {DEMO_PASSPHRASE}")
+    print(f"  2. Log in: {DEMO_EMAIL} / {DEMO_PASSWORD}")
+    print(f"  3. Enter token ID: {token_id}")
+    print(f"  4. Enter passphrase: {DEMO_PASSPHRASE}")
     print()
     print("  Store these credentials — the passphrase cannot be recovered.")
     print("=" * 60)
@@ -607,13 +677,15 @@ def main() -> None:
         "account_id": account_id,
         "passphrase": DEMO_PASSPHRASE,
         "companion_name": COMPANION_NAME,
+        "login_email": DEMO_EMAIL,
+        "login_password": DEMO_PASSWORD,
         "base_url": base_url,
         "seeded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "contents": {
             "pass_entries": 3,
             "calendar_events": 3,
             "drive_files": 2,
-            "mail_messages": 1,
+            "mail_messages": 0,
             "knowledge_docs": 1,
         },
     }
