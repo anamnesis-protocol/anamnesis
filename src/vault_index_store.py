@@ -109,16 +109,42 @@ def _sb_get_all(token_id: str) -> dict | None:
         return None
 
 
-def _sb_update(token_id: str, vault_file_ids: dict) -> bool:
+def _sb_merge_key(token_id: str, service: str, value: Any) -> bool:
     """
-    Overwrite vault_file_ids for this token in Supabase.
+    Atomically merge one service key into vault_file_ids using PostgreSQL JSONB concat (||).
+    This avoids the read-modify-write race condition when multiple services are
+    initialised concurrently (e.g. Promise.all at mint time).
     Returns True on success.
     """
     sb = _supabase()
     if not sb:
         return False
     try:
-        sb.table("profiles").update({"vault_file_ids": vault_file_ids}).eq(
+        patch = json.dumps({service: value})
+        # jsonb_set equivalent via PostgREST RPC — use raw SQL through rpc if available,
+        # otherwise fall back to the safe sequential path via _sb_update.
+        sb.rpc(
+            "merge_vault_file_id",
+            {"p_token_id": token_id, "p_patch": patch},
+        ).execute()
+        return True
+    except Exception:
+        # RPC not available (function not created yet) — fall back to full overwrite
+        return _sb_update_full(token_id, service, value)
+
+
+def _sb_update_full(token_id: str, service: str, value: Any) -> bool:
+    """
+    Full read-modify-write fallback for _sb_merge_key.
+    Safe when calls are sequential; may lose writes under concurrent init.
+    """
+    sb = _supabase()
+    if not sb:
+        return False
+    try:
+        current = _sb_get_all(token_id) or {}
+        current[service] = value
+        sb.table("profiles").update({"vault_file_ids": current}).eq(
             "companion_token_id", token_id
         ).execute()
         return True
@@ -170,12 +196,8 @@ def set_service_data(token_id: str, service: str, value: Any) -> None:
     local[token_id][service] = value
     _save_local(local)
 
-    # Push to Supabase
-    sb_data = _sb_get_all(token_id)
-    if sb_data is None:
-        return  # Supabase unavailable — local only, log already emitted
-    sb_data[service] = value
-    if not _sb_update(token_id, sb_data):
+    # Push to Supabase — use atomic merge to avoid concurrent-init race condition
+    if not _sb_merge_key(token_id, service, value):
         _logger.warning(
             "vault_index_store: Supabase update failed for token=%s service=%s; "
             "local cache written, but vault_file_id will be lost on Railway restart.",
