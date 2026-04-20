@@ -4,7 +4,7 @@ note_store.py — SAC-Pass Notes: Encrypted Secure Notes Storage
 Architecture:
   - Notes vault = encrypted JSON stored on Hedera HFS
   - Key = HKDF(token_id + wallet_sig, info=b"sovereign-ai-notes-v1")
-  - Vault index file_id cached locally in .notes_index.json
+  - Vault index file_id stored in Supabase (profiles.vault_file_ids) with local cache fallback
   - Supports multiple note types: credit_card, document, custom
 
 Vault JSON structure (plaintext before encryption):
@@ -33,20 +33,17 @@ Vault JSON structure (plaintext before encryption):
 import json
 import uuid
 from datetime import datetime, timezone
-from pathlib import Path
 
-from src.config import get_client, get_validator_contract_id
-from src.crypto import derive_key, encrypt_context, decrypt_context, compress, decompress
+from src.crypto import derive_key, compress, decompress
 from src.context_storage import store_context, load_context, update_context
 from src.vault import get_wallet_signature
 from src.event_log import log_event
+from src.vault_index_store import get_service_data, set_service_data
 
 # Purpose-separated key
 _INFO_NOTES = b"sovereign-ai-notes-v1"
 _AAD_NOTES = b"sac-notes-vault-v1"
-
-# Local cache for notes vault file_id
-_NOTES_INDEX_CACHE = Path(__file__).parent.parent / ".notes_index.json"
+_SERVICE = "notes"
 
 
 # ---------------------------------------------------------------------------
@@ -60,33 +57,16 @@ def get_notes_key(token_id: str) -> bytes:
 
 
 # ---------------------------------------------------------------------------
-# Local cache helpers
-# ---------------------------------------------------------------------------
-
-
-def _load_notes_cache() -> dict:
-    if not _NOTES_INDEX_CACHE.exists():
-        return {}
-    with open(_NOTES_INDEX_CACHE, encoding="utf-8") as f:
-        return json.load(f)
-
-
-def _save_notes_cache(data: dict) -> None:
-    with open(_NOTES_INDEX_CACHE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-
-
-# ---------------------------------------------------------------------------
 # Vault operations
 # ---------------------------------------------------------------------------
 
 
 def init_vault(token_id: str) -> str:
     """Create a new empty notes vault on HFS. Returns the HFS file_id."""
-    cache = _load_notes_cache()
-    if cache.get("file_id"):
+    existing = get_service_data(token_id, _SERVICE)
+    if existing:
         raise RuntimeError(
-            f"Notes vault already exists at {cache['file_id']}. Use get_vault() to access it."
+            f"Notes vault already exists at {existing}. Use get_vault() to access it."
         )
 
     key = get_notes_key(token_id)
@@ -97,49 +77,34 @@ def init_vault(token_id: str) -> str:
         "notes": {},
     }
     plaintext = json.dumps(vault, indent=2).encode("utf-8")
-    compressed = compress(plaintext)
-    ciphertext = encrypt_context(compressed, key, aad=_AAD_NOTES)
+    payload = compress(plaintext)
+    file_id = store_context(key, payload, token_id, _AAD_NOTES)
 
-    client = get_client()
-    contract_id = get_validator_contract_id()
-    file_id = store_context(client, contract_id, token_id, ciphertext, memo="notes-vault-v1")
-
-    cache["file_id"] = file_id
-    _save_notes_cache(cache)
-
+    set_service_data(token_id, _SERVICE, file_id)
     log_event("NOTES_VAULT_CREATED", {"token_id": token_id, "file_id": file_id})
+    print(f"[sac-notes] Vault created on HFS: {file_id}")
     return file_id
 
 
 def get_vault(token_id: str) -> dict:
     """Load and decrypt the notes vault."""
-    cache = _load_notes_cache()
-    file_id = cache.get("file_id")
+    file_id = get_service_data(token_id, _SERVICE)
     if not file_id:
         raise RuntimeError("Notes vault not initialized. Call init_vault() first.")
 
     key = get_notes_key(token_id)
-    client = get_client()
-    ciphertext = load_context(client, file_id)
-    compressed = decrypt_context(ciphertext, key, aad=_AAD_NOTES)
-    plaintext = decompress(compressed)
-    return json.loads(plaintext)
+    raw = load_context(key, file_id, token_id, _AAD_NOTES)
+    plaintext = decompress(raw)
+    return json.loads(plaintext.decode("utf-8"))
 
 
 def _save_vault(token_id: str, vault: dict) -> None:
     """Encrypt and save the vault back to HFS."""
-    cache = _load_notes_cache()
-    file_id = cache.get("file_id")
-    if not file_id:
-        raise RuntimeError("Notes vault not initialized.")
-
+    file_id = get_service_data(token_id, _SERVICE)
     key = get_notes_key(token_id)
     plaintext = json.dumps(vault, indent=2).encode("utf-8")
-    compressed = compress(plaintext)
-    ciphertext = encrypt_context(compressed, key, aad=_AAD_NOTES)
-
-    client = get_client()
-    update_context(client, file_id, ciphertext)
+    payload = compress(plaintext)
+    update_context(key, file_id, payload, token_id, _AAD_NOTES)
 
 
 # ---------------------------------------------------------------------------

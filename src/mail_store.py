@@ -8,6 +8,7 @@ Architecture:
   - HCS topic used for delivery proof — sender logs {from, to, hfs_file_id}
   - Key = HKDF(token_id + wallet_sig, info=b"sovereign-ai-mail-msg-v1")
   - AAD binds each message to message_id + recipient_token (prevents replay)
+  - Mailbox file_ids stored in Supabase (profiles.vault_file_ids) with local cache fallback
 
 Key separation (no cross-service key reuse):
   - Message key:     HKDF(..., info=b"sovereign-ai-mail-msg-v1")
@@ -50,18 +51,17 @@ Message JSON (plaintext before encryption):
 import json
 import uuid
 from datetime import datetime, timezone
-from pathlib import Path
 
 from src.crypto import derive_key, compress, decompress
 from src.context_storage import store_context, load_context, update_context
 from src.vault import get_wallet_signature
 from src.event_log import log_event
+from src.vault_index_store import get_service_data, set_service_data
 
 _INFO_MAIL_MSG = b"sovereign-ai-mail-msg-v1"
 _INFO_MAIL_INDEX = b"sovereign-ai-mail-index-v1"
 _INFO_MAIL_SENT = b"sovereign-ai-mail-sent-v1"
-
-_MAIL_CACHE = Path(__file__).parent.parent / ".mail_index.json"
+_SERVICE = "mail"
 
 _HFS_MAX_BYTES = 1_024 * 1_024  # 1 MB
 
@@ -100,33 +100,6 @@ def _sent_aad(token_id: str) -> bytes:
 
 
 # ---------------------------------------------------------------------------
-# Local cache helpers
-# ---------------------------------------------------------------------------
-
-
-def _load_mail_cache() -> dict:
-    if not _MAIL_CACHE.exists():
-        return {}
-    with open(_MAIL_CACHE, encoding="utf-8") as f:
-        return json.load(f)
-
-
-def _save_mail_cache(data: dict) -> None:
-    with open(_MAIL_CACHE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-
-
-def _get_token_cache(token_id: str) -> dict:
-    return _load_mail_cache().get(token_id, {})
-
-
-def _set_token_cache(token_id: str, data: dict) -> None:
-    cache = _load_mail_cache()
-    cache[token_id] = data
-    _save_mail_cache(cache)
-
-
-# ---------------------------------------------------------------------------
 # Mailbox initialization
 # ---------------------------------------------------------------------------
 
@@ -137,11 +110,9 @@ def init_mailbox(token_id: str) -> dict:
     Returns {"inbox_file_id": ..., "sent_file_id": ...}.
     Safe to call at account creation time.
     """
-    existing = _get_token_cache(token_id)
+    existing = get_service_data(token_id, _SERVICE) or {}
     if existing.get("inbox_file_id") and existing.get("sent_file_id"):
-        raise RuntimeError(
-            f"Mailbox already exists for {token_id}. " "Use read_inbox() to access it."
-        )
+        raise RuntimeError(f"Mailbox already exists for {token_id}. Use read_inbox() to access it.")
 
     empty_inbox = {"version": 1, "messages": {}}
     empty_sent = {"version": 1, "messages": {}}
@@ -153,7 +124,7 @@ def init_mailbox(token_id: str) -> dict:
     sent_file_id = store_context(_sent_key(token_id), sent_raw, token_id, _sent_aad(token_id))
 
     ids = {"inbox_file_id": inbox_file_id, "sent_file_id": sent_file_id}
-    _set_token_cache(token_id, ids)
+    set_service_data(token_id, _SERVICE, ids)
 
     log_event("MAIL_MAILBOX_CREATED", {"token_id": token_id, **ids})
     print(
@@ -168,8 +139,8 @@ def init_mailbox(token_id: str) -> dict:
 
 
 def _get_inbox(token_id: str) -> dict:
-    cache = _get_token_cache(token_id)
-    file_id = cache.get("inbox_file_id")
+    data = get_service_data(token_id, _SERVICE) or {}
+    file_id = data.get("inbox_file_id")
     if not file_id:
         raise RuntimeError(f"No mailbox for {token_id}. Run init_mailbox() first.")
     raw = load_context(_index_key(token_id), file_id, token_id, _inbox_aad(token_id))
@@ -177,15 +148,15 @@ def _get_inbox(token_id: str) -> dict:
 
 
 def _save_inbox(token_id: str, inbox: dict) -> None:
-    cache = _get_token_cache(token_id)
-    file_id = cache["inbox_file_id"]
+    data = get_service_data(token_id, _SERVICE) or {}
+    file_id = data["inbox_file_id"]
     raw = compress(json.dumps(inbox, indent=2).encode("utf-8"))
     update_context(_index_key(token_id), file_id, raw, token_id, _inbox_aad(token_id))
 
 
 def _get_sent(token_id: str) -> dict:
-    cache = _get_token_cache(token_id)
-    file_id = cache.get("sent_file_id")
+    data = get_service_data(token_id, _SERVICE) or {}
+    file_id = data.get("sent_file_id")
     if not file_id:
         raise RuntimeError(f"No mailbox for {token_id}. Run init_mailbox() first.")
     raw = load_context(_sent_key(token_id), file_id, token_id, _sent_aad(token_id))
@@ -193,8 +164,8 @@ def _get_sent(token_id: str) -> dict:
 
 
 def _save_sent(token_id: str, sent: dict) -> None:
-    cache = _get_token_cache(token_id)
-    file_id = cache["sent_file_id"]
+    data = get_service_data(token_id, _SERVICE) or {}
+    file_id = data["sent_file_id"]
     raw = compress(json.dumps(sent, indent=2).encode("utf-8"))
     update_context(_sent_key(token_id), file_id, raw, token_id, _sent_aad(token_id))
 
