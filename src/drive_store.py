@@ -113,14 +113,21 @@ def _save_index(token_id: str, index: dict) -> None:
 # ---------------------------------------------------------------------------
 
 
-def upload_file(token_id: str, local_path: str, tags: list[str] | None = None) -> str:
+def upload_file(
+    token_id: str, local_path: str, tags: list[str] | None = None, filename: str | None = None
+) -> str:
     """
     Encrypt and upload a file to HFS.
     Returns the drive file ID (UUID, not HFS file_id).
+
+    filename: display name to store in the index. Defaults to the basename of local_path.
+              Pass this explicitly when local_path is a temp file with a generated name.
     """
     path = Path(local_path)
     if not path.exists():
         raise FileNotFoundError(f"File not found: {local_path}")
+
+    display_name = filename or path.name
 
     raw_bytes = path.read_bytes()
     if len(raw_bytes) > _HFS_MAX_BYTES:
@@ -131,13 +138,13 @@ def upload_file(token_id: str, local_path: str, tags: list[str] | None = None) -
         )
 
     sha256 = hashlib.sha256(raw_bytes).hexdigest()
-    mime, _ = mimetypes.guess_type(str(path))
+    mime, _ = mimetypes.guess_type(display_name)
     key = get_drive_key(token_id)
-    aad = _file_aad(path.name, token_id)
+    aad = _file_aad(display_name, token_id)
     payload = compress(raw_bytes)
 
     print(
-        f"[sac-drive] Uploading {path.name} ({len(raw_bytes):,} bytes → {len(payload):,} compressed)..."
+        f"[sac-drive] Uploading {display_name} ({len(raw_bytes):,} bytes → {len(payload):,} compressed)..."
     )
     hfs_file_id = store_context(key, payload, token_id, aad)
 
@@ -145,7 +152,7 @@ def upload_file(token_id: str, local_path: str, tags: list[str] | None = None) -
     file_uuid = str(uuid.uuid4())
     index = _get_index(token_id)
     index["files"][file_uuid] = {
-        "filename": path.name,
+        "filename": display_name,
         "size_bytes": len(raw_bytes),
         "mime_type": mime or "application/octet-stream",
         "hfs_file_id": hfs_file_id,
@@ -159,13 +166,13 @@ def upload_file(token_id: str, local_path: str, tags: list[str] | None = None) -
         "DRIVE_FILE_UPLOADED",
         {
             "token_id": token_id,
-            "filename": path.name,
+            "filename": display_name,
             "size_bytes": len(raw_bytes),
             "hfs_file_id": hfs_file_id,
             "sha256": sha256,
         },
     )
-    print(f"[sac-drive] Uploaded: {path.name} → {hfs_file_id} (drive id: {file_uuid[:8]}...)")
+    print(f"[sac-drive] Uploaded: {display_name} → {hfs_file_id} (drive id: {file_uuid[:8]}...)")
     return file_uuid
 
 

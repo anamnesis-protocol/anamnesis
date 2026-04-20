@@ -119,7 +119,7 @@ async def drive_upload(
         tmp_path = tmp.name
 
     try:
-        file_uuid = upload_file(token_id, tmp_path, tags=tag_list)
+        file_uuid = upload_file(token_id, tmp_path, tags=tag_list, filename=file.filename)
     except (RuntimeError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     finally:
