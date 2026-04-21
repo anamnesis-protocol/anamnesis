@@ -1,6 +1,6 @@
 [package]
 name = "artyfitchels"
-version = "0.1.1"
+version = "0.1.2"
 description = "Arty Fitchel's — Your AI companion that never resets"
 authors = ["Arty Fitchel's LLC"]
 license = "Proprietary"
