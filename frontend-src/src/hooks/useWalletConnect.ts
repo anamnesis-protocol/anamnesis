@@ -18,6 +18,17 @@ const MIRROR_BASE =
 
 const STORAGE_KEY = 'af-wallet-account'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function makeLedgerId(network: string): any {
+  return {
+    toString: () => network,
+    isMainnet: () => network === 'mainnet',
+    isTestnet: () => network === 'testnet',
+    isPreviewnet: () => false,
+    _ledgerId: network,
+  }
+}
+
 async function checkTokenOwnership(accountId: string, tokenId: string): Promise<boolean> {
   try {
     const res = await fetch(
@@ -43,7 +54,7 @@ export function useWalletConnect(companionTokenId: string | null) {
   tokenIdRef.current = companionTokenId
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const hcRef = useRef<any>(null)
+  const connectorRef = useRef<any>(null)
 
   useEffect(() => {
     try {
@@ -51,80 +62,43 @@ export function useWalletConnect(companionTokenId: string | null) {
       if (saved && companionTokenId) {
         setState(s => ({ ...s, status: 'connecting', accountId: saved }))
         checkTokenOwnership(saved, companionTokenId).then(owns => {
-          setState(s => ({
-            ...s,
-            status: owns ? 'verified' : 'connected',
-            ownsToken: owns,
-          }))
+          setState(s => ({ ...s, status: owns ? 'verified' : 'connected', ownsToken: owns }))
         })
       }
     } catch { /* ignore */ }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let hc: any
-
     async function setup() {
-      const { HashConnect } = await import('hashconnect')
+      const { DAppConnector } = await import('@hashgraph/hedera-wallet-connect')
 
-      const ledger = {
-        toString: () => NETWORK,
-        isMainnet: () => NETWORK === 'mainnet',
-        isTestnet: () => NETWORK === 'testnet',
-        isPreviewnet: () => false,
-        _ledgerId: NETWORK,
-      } as any // eslint-disable-line @typescript-eslint/no-explicit-any
-
-      hc = new HashConnect(
-        ledger,
-        PROJECT_ID,
+      const connector = new DAppConnector(
         {
           name: 'Arty Fitchels',
           description: 'Your persistent AI companion',
           url: 'https://artyfitchels.ai',
           icons: ['https://artyfitchels.ai/icon.png'],
         },
-        false
+        makeLedgerId(NETWORK),
+        PROJECT_ID
       )
 
-      hcRef.current = hc
+      connectorRef.current = connector
+      await connector.init()
 
-      hc.pairingEvent.on(async (data: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-        const accountId = data.accountIds?.[0]?.toString() ?? null
-        if (!accountId) return
-
-        try { localStorage.setItem(STORAGE_KEY, accountId) } catch { /* ignore */ }
-
-        setState(s => ({ ...s, status: 'connecting', accountId, error: null }))
-
+      const existing = connector.signers?.[0]?.getAccountId?.()?.toString() ?? null
+      if (existing) {
+        try { localStorage.setItem(STORAGE_KEY, existing) } catch { /* ignore */ }
         if (tokenIdRef.current) {
-          const owns = await checkTokenOwnership(accountId, tokenIdRef.current)
-          setState(s => ({
-            ...s,
-            status: owns ? 'verified' : 'connected',
-            ownsToken: owns,
-          }))
+          const owns = await checkTokenOwnership(existing, tokenIdRef.current)
+          setState(s => ({ ...s, status: owns ? 'verified' : 'connected', accountId: existing, ownsToken: owns }))
         } else {
-          setState(s => ({ ...s, status: 'connected', ownsToken: false }))
+          setState(s => ({ ...s, status: 'connected', accountId: existing }))
         }
-      })
+      }
 
-      hc.disconnectionEvent.on(() => {
+      connector.walletConnectClient?.on('session_delete', () => {
         try { localStorage.removeItem(STORAGE_KEY) } catch { /* ignore */ }
         setState({ status: 'idle', accountId: null, ownsToken: false, error: null })
       })
-
-      await hc.init()
-
-      const existing = hc.connectedAccountIds?.[0]?.toString() ?? null
-      if (existing && tokenIdRef.current) {
-        setState(s => ({ ...s, status: 'connecting', accountId: existing }))
-        const owns = await checkTokenOwnership(existing, tokenIdRef.current)
-        setState(s => ({
-          ...s,
-          status: owns ? 'verified' : 'connected',
-          ownsToken: owns,
-        }))
-      }
     }
 
     setup().catch(err => {
@@ -132,24 +106,41 @@ export function useWalletConnect(companionTokenId: string | null) {
     })
 
     return () => {
-      hcRef.current?.disconnect().catch(() => {})
+      connectorRef.current?.disconnectAll().catch(() => {})
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const connect = useCallback(async () => {
-    if (!hcRef.current) return
+    if (!connectorRef.current) return
     setState(s => ({ ...s, status: 'connecting', error: null }))
     try {
-      await hcRef.current.openPairingModal('dark', '#0f172a', '#7c3aed', '#7c3aed', '8px')
-    } catch (e) {
-      setState(s => ({ ...s, status: 'error', error: String(e) }))
+      await connectorRef.current.openModal()
+
+      const accountId = connectorRef.current.signers?.[0]?.getAccountId?.()?.toString() ?? null
+      if (!accountId) {
+        setState(s => ({ ...s, status: 'idle' }))
+        return
+      }
+
+      try { localStorage.setItem(STORAGE_KEY, accountId) } catch { /* ignore */ }
+
+      if (tokenIdRef.current) {
+        const owns = await checkTokenOwnership(accountId, tokenIdRef.current)
+        setState(s => ({ ...s, status: owns ? 'verified' : 'connected', accountId, ownsToken: owns, error: null }))
+      } else {
+        setState(s => ({ ...s, status: 'connected', accountId, ownsToken: false, error: null }))
+      }
+    } catch {
+      setState(s => ({ ...s, status: 'idle', error: null }))
     }
   }, [])
 
   const disconnect = useCallback(async () => {
-    if (!hcRef.current) return
-    await hcRef.current.disconnect()
+    if (!connectorRef.current) return
+    try { await connectorRef.current.disconnectAll() } catch { /* ignore */ }
+    try { localStorage.removeItem(STORAGE_KEY) } catch { /* ignore */ }
+    setState({ status: 'idle', accountId: null, ownsToken: false, error: null })
   }, [])
 
   return { ...state, connect, disconnect }
