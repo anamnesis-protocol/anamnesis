@@ -65,6 +65,9 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Updater signing — required for auto-update to work
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           # macOS signing (set in repo secrets when ready)
           # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -72,15 +75,12 @@ jobs:
           # APPLE_ID: ${{ secrets.APPLE_ID }}
           # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          # Windows signing (set in repo secrets when ready)
-          # TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          # TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           projectPath: frontend-src
-          tagName: desktop-v0.1.0
-          releaseName: 'Arty Fitchels Desktop v0.1.0'
+          tagName: desktop-v__VERSION__
+          releaseName: 'Arty Fitchels Desktop v__VERSION__'
           releaseBody: |
-            ## Arty Fitchels Desktop v0.1.0
+            ## Arty Fitchels Desktop v__VERSION__
 
             Download the installer for your platform:
 
@@ -91,9 +91,10 @@ jobs:
             | macOS (Intel) | `.dmg` |
             | Linux | `.deb` or `.AppImage` |
 
+            **Existing users:** Your app will prompt you to update automatically on next launch.
+
             **First launch on macOS:** If you see "unidentified developer", right-click the app → Open → Open. This will be resolved once code signing is set up.
 
             **First launch on Windows:** If SmartScreen appears, click "More info" → "Run anyway".
-          releaseDraft: false
+          releaseDraft: ${{ github.event.inputs.draft == 'true' }}
           prerelease: false
-          releaseId: ${{ github.event.inputs.release_id || '' }}
