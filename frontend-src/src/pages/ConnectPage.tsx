@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAppStore } from '../store/appStore'
 import { api } from '../api/client'
 import Header from '../components/layout/Header'
+import WalletConnectButton from '../components/wallet/WalletConnectButton'
 
 type Mode = 'returning' | 'new'
 
@@ -162,6 +163,15 @@ export default function ConnectPage() {
             {/* ── New user ── */}
             {mode === 'new' && (
               <>
+                <WalletConnectButton
+                  companionTokenId={null}
+                  onAccountId={(id) => setAccountId(id)}
+                />
+                <div className="relative flex items-center">
+                  <div className="flex-1 border-t border-surface-border" />
+                  <span className="px-3 text-xs text-slate-600">or enter manually</span>
+                  <div className="flex-1 border-t border-surface-border" />
+                </div>
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Your Hedera Account ID</label>
                   <input
