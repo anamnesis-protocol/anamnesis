@@ -21,7 +21,7 @@ We release security updates for the following versions:
 
 **Email:** security@[project-domain].com *(Update with actual security contact)*
 
-**GitHub Security Advisory:** [Create a private security advisory](https://github.com/gamilu/context-sovereignty/security/advisories/new)
+**GitHub Security Advisory:** [Create a private security advisory](https://github.com/anamnesis-protocol/anamnesis/security/advisories/new)
 
 ### What to Include
 
@@ -135,7 +135,7 @@ self.encryption_key = derive_key(...)  # Don't do this
 - **Key Derivation:** HKDF-SHA256 (RFC 5869)
   - Input: `token_id + wallet_signature`
   - Salt: `SHA256(token_id)`
-  - Info: `b"sovereign-ai-context-v1"`
+  - Info: `b"anamnesis-v1"`
   - Output: 32-byte AES-256 key
 
 - **Encryption:** AES-256-GCM
@@ -156,7 +156,7 @@ self.encryption_key = derive_key(...)  # Don't do this
 
 ```python
 # 1. Generate challenge
-challenge = b"sovereign-ai-context-challenge-" + token_id.encode()
+challenge = b"anamnesis-challenge-" + token_id.encode()
 
 # 2. User signs with wallet (off-chain)
 wallet_signature = wallet.sign(challenge)
@@ -254,7 +254,7 @@ We plan to conduct a professional security audit before production deployment. A
 ## Security Contacts
 
 - **General Security:** security@[project-domain].com
-- **GitHub Security:** [Security Advisories](https://github.com/gamilu/context-sovereignty/security/advisories)
+- **GitHub Security:** [Security Advisories](https://github.com/anamnesis-protocol/anamnesis/security/advisories)
 - **Urgent Issues:** Tag with `security` label in GitHub Issues (for non-sensitive reports)
 
 ---

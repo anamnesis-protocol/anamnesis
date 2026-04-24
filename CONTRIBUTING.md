@@ -8,11 +8,11 @@ Thank you for your interest in contributing to Sovereign AI Context! This projec
 
 ```bash
 # Fork the repository on GitHub, then clone your fork
-git clone https://github.com/YOUR_USERNAME/context-sovereignty.git
-cd context-sovereignty
+git clone https://github.com/YOUR_USERNAME/anamnesis.git
+cd anamnesis
 
 # Add upstream remote
-git remote add upstream https://github.com/gamilu/context-sovereignty.git
+git remote add upstream https://github.com/anamnesis-protocol/anamnesis.git
 ```
 
 ### Development Environment Setup
@@ -299,8 +299,8 @@ start htmlcov/index.html  # Windows
 
 ## Getting Help
 
-- **Issues:** [GitHub Issues](https://github.com/gamilu/context-sovereignty/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/gamilu/context-sovereignty/discussions)
+- **Issues:** [GitHub Issues](https://github.com/anamnesis-protocol/anamnesis/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/anamnesis-protocol/anamnesis/discussions)
 - **Security:** See [SECURITY.md](SECURITY.md)
 
 ## License

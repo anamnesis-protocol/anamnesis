@@ -11,8 +11,8 @@ Complete guide to running Sovereign AI Context locally.
 ## 1. Clone the Repository
 
 ```bash
-git clone https://github.com/gamilu/context-sovereignty.git
-cd context-sovereignty
+git clone https://github.com/anamnesis-protocol/anamnesis.git
+cd anamnesis
 ```
 
 ## 2. Set Up Python Environment
@@ -263,13 +263,13 @@ Track work continuity across sessions with persistent session state:
 
 ```bash
 # Start a new session
-python scripts/session_manager.py start "Implementing features" "Working on context-sovereignty"
+python scripts/session_manager.py start "Implementing features" "Working on anamnesis"
 
 # Check current status
 python scripts/session_manager.py status
 
 # Add a project
-python scripts/session_manager.py add-project "context-sovereignty" --priority 1
+python scripts/session_manager.py add-project "anamnesis" --priority 1
 
 # Update next actions
 python scripts/session_manager.py next-actions "Complete tests" "Update docs" "Deploy"
@@ -460,6 +460,6 @@ python scripts/deploy_contract.py
 
 ## Getting Help
 
-- **Issues**: [GitHub Issues](https://github.com/gamilu/context-sovereignty/issues)
+- **Issues**: [GitHub Issues](https://github.com/anamnesis-protocol/anamnesis/issues)
 - **Hedera Docs**: [docs.hedera.com](https://docs.hedera.com)
 - **Hedera Discord**: [hedera.com/discord](https://hedera.com/discord)

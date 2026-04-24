@@ -8,7 +8,7 @@ Organize memory packages by domain:
 
 **Test:**
 ```bash
-cd d:\code\sovereign-ai-context
+cd /path/to/anamnesis
 python scripts/context_manager.py list
 python scripts/context_manager.py suggest "Building a React app with Hedera integration"
 ```
@@ -107,18 +107,18 @@ print(f"Current task: {loaded.current_task}")
 
 ### Option 1: Test in Sovereign-AI-Context Repo
 ```bash
-cd d:\code\sovereign-ai-context
+cd /path/to/anamnesis
 python -m pytest tests/ -v  # Run all 89 tests
 ```
 
 ### Option 2: Deploy to Your Vault
 ```bash
 # Copy modules to your vault directory
-cp d:\code\sovereign-ai-context\src\bounded_contexts.py <your_vault_path>\
-cp d:\code\sovereign-ai-context\src\metadata.py <your_vault_path>\
-cp d:\code\sovereign-ai-context\src\vault_monitor.py <your_vault_path>\
-cp d:\code\sovereign-ai-context\src\rag.py <your_vault_path>\
-cp d:\code\sovereign-ai-context\src\session_state.py <your_vault_path>\
+cp /path/to/anamnesis\src\bounded_contexts.py <your_vault_path>\
+cp /path/to/anamnesis\src\metadata.py <your_vault_path>\
+cp /path/to/anamnesis\src\vault_monitor.py <your_vault_path>\
+cp /path/to/anamnesis\src\rag.py <your_vault_path>\
+cp /path/to/anamnesis\src\session_state.py <your_vault_path>\
 
 # Test in vault context
 cd <your_vault_path>

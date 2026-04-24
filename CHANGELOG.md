@@ -139,7 +139,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Links
 
-- [GitHub Repository](https://github.com/gamilu/context-sovereignty)
-- [Issue Tracker](https://github.com/gamilu/context-sovereignty/issues)
+- [GitHub Repository](https://github.com/anamnesis-protocol/anamnesis)
+- [Issue Tracker](https://github.com/anamnesis-protocol/anamnesis/issues)
 - [Security Policy](SECURITY.md)
 - [Contributing Guide](CONTRIBUTING.md)
