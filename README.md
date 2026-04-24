@@ -4,6 +4,8 @@
 
 **Sovereign AI memory. Yours forever.**
 
+[Read the technical specification →](WHITEPAPER.md)
+
 Anamnesis is an open protocol for persistent, encrypted, user-owned AI context. Your conversation history, knowledge, and relationship with AI lives on infrastructure you control — not on a company's server.
 
 When you talk to an AI, it forgets you the moment the session ends. You start over every time. Anamnesis is the fix: your context persists across every session, every model, every platform. Encrypted with a key derived from a token you own. Readable only by you.
@@ -279,6 +281,10 @@ From the Greek — *unforgetting*. Plato's concept that learning is the recovery
 Your AI context was always yours. We just gave it back.
 
 ---
+
+## Specification
+
+The full protocol specification — cryptographic primitives, session protocol, storage layer, ownership layer, audit trail, and prior art statement — is in [WHITEPAPER.md](WHITEPAPER.md).
 
 ## License
 
