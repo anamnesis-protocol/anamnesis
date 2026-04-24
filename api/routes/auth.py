@@ -26,6 +26,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 # ── Request models ─────────────────────────────────────────────────────────────
 
+
 class SignupRequest(BaseModel):
     email: str
     password: str
@@ -38,6 +39,7 @@ class LoginRequest(BaseModel):
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
+
 def _supabase_service():
     """Return Supabase client with service role key (admin access)."""
     supabase_url = os.getenv("SUPABASE_URL")
@@ -45,6 +47,7 @@ def _supabase_service():
     if not supabase_url or not service_key:
         raise HTTPException(503, "Auth service not configured — SUPABASE_URL/SERVICE_KEY missing.")
     from supabase import create_client
+
     return create_client(supabase_url, service_key)
 
 
@@ -55,10 +58,12 @@ def _supabase_anon():
     if not supabase_url or not anon_key:
         raise HTTPException(503, "Auth service not configured — SUPABASE_URL/ANON_KEY missing.")
     from supabase import create_client
+
     return create_client(supabase_url, anon_key)
 
 
 # ── POST /auth/signup ──────────────────────────────────────────────────────────
+
 
 @router.post("/signup")
 @limiter.limit("3/minute")
@@ -84,12 +89,14 @@ def signup(request: Request, req: SignupRequest):
 
     # Create an inactive subscription row for this user
     try:
-        sb.table("subscriptions").insert({
-            "user_id": user_id,
-            "status": "inactive",
-        }).execute()
+        sb.table("subscriptions").insert(
+            {
+                "user_id": user_id,
+                "status": "inactive",
+            }
+        ).execute()
     except Exception:
-        pass # Row may already exist from a previous partial signup
+        pass  # Row may already exist from a previous partial signup
 
     if res.session:
         # Email confirmation disabled — user is logged in immediately
@@ -111,6 +118,7 @@ def signup(request: Request, req: SignupRequest):
 
 
 # ── POST /auth/login ───────────────────────────────────────────────────────────
+
 
 @router.post("/login")
 @limiter.limit("5/minute")
@@ -139,6 +147,7 @@ def login(request: Request, req: LoginRequest):
 
 # ── GET /auth/status ───────────────────────────────────────────────────────────
 
+
 @router.get("/status")
 @limiter.limit("30/minute")
 def auth_status(request: Request, authorization: str = Header(default="")):
@@ -150,6 +159,7 @@ def auth_status(request: Request, authorization: str = Header(default="")):
         raise HTTPException(401, "Authorization header required.")
 
     import jwt
+
     token = authorization[7:]
     jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
     if not jwt_secret:

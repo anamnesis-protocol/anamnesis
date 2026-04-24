@@ -49,6 +49,7 @@ class KeyRequest(BaseModel):
 # GET /user/keys
 # ---------------------------------------------------------------------------
 
+
 @router.get("")
 def list_configured(user_id: str = Depends(get_current_user)):
     """
@@ -77,6 +78,7 @@ def list_configured(user_id: str = Depends(get_current_user)):
 # POST /user/keys/{provider}
 # ---------------------------------------------------------------------------
 
+
 @router.post("/{provider}")
 def save_key(
     provider: str,
@@ -88,9 +90,15 @@ def save_key(
     Upserts — if a key for this provider already exists, it is replaced.
     """
     if provider not in _VALID_PROVIDERS:
-        raise HTTPException(status_code=400, detail=f"Unknown provider '{provider}'. Valid: openai, anthropic, google, mistral, groq, ollama.")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown provider '{provider}'. Valid: openai, anthropic, google, mistral, groq, ollama.",
+        )
     if user_id == "demo-user":
-        raise HTTPException(status_code=400, detail="Cannot save keys in demo mode. Create a real account to manage your own keys.")
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot save keys in demo mode. Create a real account to manage your own keys.",
+        )
     if not req.key.strip():
         raise HTTPException(status_code=400, detail="API key cannot be empty.")
 
@@ -105,6 +113,7 @@ def save_key(
 # ---------------------------------------------------------------------------
 # DELETE /user/keys/{provider}
 # ---------------------------------------------------------------------------
+
 
 @router.delete("/{provider}")
 def remove_key(

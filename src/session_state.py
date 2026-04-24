@@ -139,9 +139,7 @@ class SessionState:
 
         for proj in self.active_projects:
             priority_emoji = {1: "🔴", 2: "🟡", 3: "🟢"}.get(proj.priority, "⚪")
-            status_emoji = {"active": "✅", "paused": "⏸️", "completed": "✔️"}.get(
-                proj.status, "❓"
-            )
+            status_emoji = {"active": "✅", "paused": "⏸️", "completed": "✔️"}.get(proj.status, "❓")
 
             lines.append(f"### {status_emoji} {proj.name} {priority_emoji}")
             lines.append(f"- **Status:** {proj.status}")

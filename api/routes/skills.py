@@ -39,10 +39,13 @@ router = APIRouter(prefix="/skills", tags=["skills"])
 # Request / Response models
 # ---------------------------------------------------------------------------
 
+
 class SkillSaveRequest(BaseModel):
     name: str = Field(description="Unique skill name (snake_case recommended)")
     description: str = Field(description="What this skill does")
-    instructions: str = Field(description="Step-by-step instructions for the AI to perform this task")
+    instructions: str = Field(
+        description="Step-by-step instructions for the AI to perform this task"
+    )
     input_schema: dict = Field(
         default_factory=lambda: {"type": "object", "properties": {}},
         description="JSON Schema for the skill's input parameters",
@@ -96,6 +99,7 @@ class McpToolsResponse(BaseModel):
 # GET /skills — list all skills
 # ---------------------------------------------------------------------------
 
+
 @router.get("", response_model=SkillListResponse)
 def list_skills(
     session_id: str = Query(description="Active session UUID from /session/open"),
@@ -138,6 +142,7 @@ def list_skills(
 # GET /skills/tools — list skills as MCP tool definitions
 # ---------------------------------------------------------------------------
 
+
 @router.get("/tools", response_model=McpToolsResponse)
 def list_skill_tools(
     session_id: str = Query(description="Active session UUID from /session/open"),
@@ -170,6 +175,7 @@ def list_skill_tools(
 # ---------------------------------------------------------------------------
 # GET /skills/{skill_id} — get a specific skill
 # ---------------------------------------------------------------------------
+
 
 @router.get("/{skill_id}", response_model=SkillDetail)
 def get_skill(
@@ -208,6 +214,7 @@ def get_skill(
 # ---------------------------------------------------------------------------
 # POST /skills — create or update a skill
 # ---------------------------------------------------------------------------
+
 
 @router.post("", response_model=SkillSaveResponse)
 def upsert_skill(
@@ -254,6 +261,7 @@ def upsert_skill(
 # ---------------------------------------------------------------------------
 # DELETE /skills/{skill_id} — remove skill from index
 # ---------------------------------------------------------------------------
+
 
 @router.delete("/{skill_id}", response_model=SkillDeleteResponse)
 def remove_skill(

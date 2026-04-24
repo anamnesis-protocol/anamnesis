@@ -104,7 +104,8 @@ def test_generate_alerts_critical():
 
 def test_generate_alerts_stale():
     """Test stale content alert generation."""
-    sections = {f"section{i}": """---
+    sections = {
+        f"section{i}": """---
 tags: ["#status/active"]
 created: "2025-01-01"
 last_updated: "2025-01-01"
@@ -113,7 +114,9 @@ status: "active"
 version: "1.0"
 ---
 Content
-""" for i in range(5)}
+"""
+        for i in range(5)
+    }
 
     with tempfile.TemporaryDirectory() as tmpdir:
         metrics_file = Path(tmpdir) / "metrics.json"

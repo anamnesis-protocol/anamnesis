@@ -68,7 +68,9 @@ def get_current_user(authorization: str = Header(default="")) -> str:
             # HS256 fallback — use the JWT secret
             jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
             if not jwt_secret:
-                raise HTTPException(status_code=503, detail="Auth not configured — SUPABASE_JWT_SECRET missing.")
+                raise HTTPException(
+                    status_code=503, detail="Auth not configured — SUPABASE_JWT_SECRET missing."
+                )
             payload = jwt.decode(token, jwt_secret, algorithms=[alg], audience="authenticated")
         else:
             # RS256 (and other asymmetric) — use JWKS endpoint
@@ -90,5 +92,3 @@ def get_current_user(authorization: str = Header(default="")) -> str:
         raise HTTPException(status_code=401, detail="Invalid token payload — missing sub.")
 
     return user_id
-
-
