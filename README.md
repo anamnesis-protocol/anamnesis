@@ -32,6 +32,10 @@ Your accumulated context — everything your AI has learned about you, your doma
 
 Anamnesis includes agentic tools: your AI can retrieve your passwords, create calendar events, send encrypted messages, manage your files — all within cryptographic session boundaries. It acts on your behalf without any platform seeing the data it touches.
 
+### If you're silenced, your documentation survives
+
+For journalists, whistleblowers, and researchers working in sensitive territory: the protocol includes a dead man's switch. A smart contract automatically transfers your encrypted vault to a pre-designated journalist or organization if you stop checking in. If you are arrested, disappeared, or killed — the documentation reaches the people you chose. No intermediary. No one can stop it from firing.
+
 ### Prove your context hasn't been tampered with
 
 Every context update is logged to Hedera Consensus Service with a timestamp and content hash. Your AI's memory is not just private — it's verifiable. Cryptographic proof that no one has touched it.
@@ -78,7 +82,7 @@ This mechanism is **chain-agnostic**. Any chain that supports token ownership ca
 
 ### 2. Decentralized Storage
 
-Encrypted context lives on Hedera File Service (HFS) — an immutable, decentralized ledger. It survives:
+Encrypted context lives on Hedera via HCS-1 — an immutable, decentralized ledger. It survives:
 
 - Platform shutdowns
 - Terms of service changes
@@ -124,7 +128,7 @@ The same encrypted vault works with any AI provider:
 │                  Hedera Hashgraph                   │
 │                                                     │
 │  HTS — Token ownership proof                        │
-│  HFS — Encrypted context storage                    │
+│  HCS-1 — Encrypted context storage                  │
 │  HCS — Immutable audit log                          │
 │  EVM — Access control smart contracts               │
 └─────────────────────────────────────────────────────┘
@@ -134,9 +138,9 @@ The same encrypted vault works with any AI provider:
 
 1. Wallet signs a server-issued challenge
 2. HKDF-SHA256 derives AES-256-GCM key from `token_id + signature`
-3. Encrypted context downloaded from HFS and decrypted locally
+3. Encrypted context downloaded from HCS-1 and decrypted locally
 4. Plaintext never leaves your device — only injected into AI provider call
-5. After session: re-encrypted, written back to HFS, update logged to HCS
+5. After session: re-encrypted, written back to HCS-1, update logged to HCS
 
 ---
 
@@ -147,7 +151,7 @@ The reference implementation uses Hedera (HTS + HFS + HCS). Any stack that provi
 | Layer | Reference | Alternatives |
 |-------|-----------|-------------|
 | Token ownership | Hedera HTS | Ethereum ERC-721, Polygon, Solana, Base |
-| Encrypted storage | Hedera HFS | Arweave (permanent, pay-once), IPFS + Filecoin |
+| Encrypted storage | Hedera HCS-1 (recommended) | Arweave (permanent, pay-once), IPFS + Filecoin, Hedera HFS |
 | Audit log | Hedera HCS | Any chain event log, Arweave |
 
 **Arweave** is worth particular consideration for the storage layer — pay once, stored permanently, genuinely decentralized with no governance council. A community implementation using Ethereum + Arweave would be a meaningful contribution to the ecosystem.
