@@ -1,5 +1,7 @@
 # Anamnesis Protocol
 
+*an-am-NEE-sis* — from the Greek, meaning "unforgetting."
+
 **Sovereign AI memory. Yours forever.**
 
 Anamnesis is an open protocol for persistent, encrypted, user-owned AI context. Your conversation history, knowledge, and relationship with AI lives on infrastructure you control — not on a company's server.
