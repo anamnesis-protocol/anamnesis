@@ -70,7 +70,9 @@ Your encryption key is never stored anywhere. It is derived fresh each session u
 key = HKDF(token_id + wallet_signature)
 ```
 
-Your Hedera HTS token is the proof of ownership. Your wallet signature is the proof of presence. No one else can produce this key — not the server, not us, not anyone.
+The token is the proof of ownership. The wallet signature is the proof of presence. No one else can produce this key — not the server, not us, not anyone.
+
+This mechanism is **chain-agnostic**. Any chain that supports token ownership can serve as the ownership layer. The reference implementation uses Hedera, but the protocol is not Hedera-specific.
 
 ### 2. Decentralized Storage
 
@@ -133,6 +135,22 @@ The same encrypted vault works with any AI provider:
 3. Encrypted context downloaded from HFS and decrypted locally
 4. Plaintext never leaves your device — only injected into AI provider call
 5. After session: re-encrypted, written back to HFS, update logged to HCS
+
+---
+
+## Alternative Implementations
+
+The reference implementation uses Hedera (HTS + HFS + HCS). Any stack that provides token ownership, decentralized storage, and an immutable audit log can implement this protocol.
+
+| Layer | Reference | Alternatives |
+|-------|-----------|-------------|
+| Token ownership | Hedera HTS | Ethereum ERC-721, Polygon, Solana, Base |
+| Encrypted storage | Hedera HFS | Arweave (permanent, pay-once), IPFS + Filecoin |
+| Audit log | Hedera HCS | Any chain event log, Arweave |
+
+**Arweave** is worth particular consideration for the storage layer — pay once, stored permanently, genuinely decentralized with no governance council. A community implementation using Ethereum + Arweave would be a meaningful contribution to the ecosystem.
+
+If you build an implementation on a different stack, open a PR to add it to this list.
 
 ---
 
