@@ -180,10 +180,10 @@ Any NFT or token standard on any chain is a valid ownership layer:
 | Backend | Notes |
 |---------|-------|
 | Hedera HTS | Reference implementation |
-| Ethereum ERC-721 | Most widely supported NFT standard |
+| Ethereum ERC-721 | Most widely supported NFT standard; widest wallet support |
 | Polygon ERC-721 | Lower gas cost Ethereum-compatible |
+| Base ERC-721 | Very low cost L2; rapidly growing ecosystem |
 | Solana SPL Token | Fast, low cost |
-| Base ERC-721 | Emerging L2, very low cost |
 
 ---
 
@@ -227,7 +227,46 @@ Any append-only, tamper-evident log is valid:
 
 ---
 
-## 7. Session Protocol
+## 7. Recommended Stack for Maximum Accessibility
+
+The Anamnesis Protocol is chain-agnostic by design. However, implementors focused on maximum humanitarian accessibility — lowest cost, no governance risk, widest reach — should consider the following analysis.
+
+### 7.1 Storage: Arweave
+
+Arweave is the most aligned storage backend for a protocol intended as a public good:
+
+- **Pay-once, permanent** — A single payment stores data forever. There are no recurring fees, no subscription, no risk of expiry.
+- **No governance council** — Arweave has no equivalent of a board that could change terms. The storage incentive is baked into the protocol's endowment model.
+- **Truly decentralized** — Data is replicated across independent miners with no central coordinator.
+
+For a user in a low-income context minting once and storing their AI context permanently, Arweave's economic model is the most aligned with "this is yours, no strings attached."
+
+### 7.2 Ownership: Ethereum L2 (Base or Polygon)
+
+For token ownership, an Ethereum L2 offers the best combination of accessibility and trust:
+
+- **Widest wallet support** — More people have Ethereum-compatible wallets (MetaMask, Coinbase Wallet, Rainbow) than any other ecosystem.
+- **Low cost** — Base and Polygon reduce gas costs to fractions of a cent, making minting accessible globally.
+- **Deep trust** — Ethereum's security model is the most battle-tested in the industry.
+- **ERC-721 is universal** — Any developer can implement ownership without learning a new token standard.
+
+### 7.3 Recommended Humanitarian Stack
+
+| Layer | Recommendation | Rationale |
+|-------|---------------|-----------|
+| Token ownership | Base or Polygon ERC-721 | Widest wallets, lowest cost, deep trust |
+| Encrypted storage | Arweave | Pay-once, permanent, no governance risk |
+| Audit trail | Arweave transactions | Same infrastructure, no additional cost |
+
+### 7.4 Reference Implementation Stack (Hedera)
+
+The reference implementation uses Hedera (HTS + HFS + HCS). Hedera offers faster finality (3–5 seconds), low per-transaction fees, and an elegant unified ecosystem for token, storage, and audit in one place. It is a strong production choice. The governance council (Google, IBM, Boeing, and others) is a trust consideration some deployments may wish to avoid — which is why the protocol explicitly supports the alternatives above.
+
+The ideal stack depends on the deployment context. For consumer products prioritizing accessibility: Ethereum L2 + Arweave. For enterprise deployments prioritizing speed and integrated tooling: Hedera.
+
+---
+
+## 8. Session Protocol
 
 ### 7.1 Full Session Flow
 
@@ -275,7 +314,7 @@ Client                          Server                    Blockchain
 
 ---
 
-## 8. Context Format
+## 9. Context Format
 
 Context is a structured JSON document. Implementations may extend this schema.
 
@@ -310,7 +349,7 @@ Context is a structured JSON document. Implementations may extend this schema.
 
 ---
 
-## 9. Model Agnosticism
+## 10. Model Agnosticism
 
 The protocol is AI-provider-agnostic. The decrypted context is injected into any provider's API call as a system prompt or context window prefix. The provider receives the context for the duration of one session and nothing more.
 
@@ -346,7 +385,7 @@ Any provider with a chat completion API is compatible:
 
 ---
 
-## 10. Prior Art Statement
+## 11. Prior Art Statement
 
 This specification is published as prior art under Apache 2.0. The author held US provisional patent applications covering aspects of this architecture. Those applications will not be pursued as non-provisional patents. This publication is an intentional dedication of the described methods to the public domain, establishing prior art against any future patent claims on the same methods by any party.
 
@@ -356,7 +395,7 @@ No permission is required to implement, use, modify, or commercialize this proto
 
 ---
 
-## 11. Reference Implementation
+## 12. Reference Implementation
 
 A complete reference implementation is available at:
 
@@ -373,7 +412,7 @@ The implementation includes:
 
 ---
 
-## 12. Versioning
+## 13. Versioning
 
 This document describes Anamnesis Protocol version 1.0.0.
 
