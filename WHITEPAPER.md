@@ -413,7 +413,128 @@ Any provider with a chat completion API is compatible:
 
 ---
 
-## 11. Prior Art Statement
+## 11. Disclosure Protection Patterns
+
+This section describes implementation patterns for users whose context may be subject to suppression — researchers, journalists, whistleblowers, and others whose documentation could be targeted by legal pressure, platform coercion, or physical threat. These patterns are optional extensions of the base protocol.
+
+### 11.1 Token Transfer for Pre-Arranged Access
+
+Because decryption capability is derived from token ownership, transferring the token transfers the ability to decrypt. A user who wishes to ensure a trusted party can access their context in an emergency MAY pre-arrange token transfer.
+
+**Pattern: Pre-designated token recipient**
+
+Before any emergency occurs, the user designates a trusted party — a journalist, legal representative, or advocacy organization — and pre-arranges the following:
+
+1. The trusted party is given the wallet address that will receive the token.
+2. If the user is silenced, arrested, or killed, the token is transferred to that address.
+3. The trusted party derives the decryption key using the transferred token and their own wallet signature over a challenge.
+
+This requires manual action from someone with access to the user's wallet. For users who cannot guarantee that access, the dead man's switch pattern below is preferred.
+
+### 11.2 Dead Man's Switch
+
+A dead man's switch is a smart contract that automatically transfers the ownership token to a pre-designated address if the user fails to check in within a defined window. No manual action is required. If the user is silenced and cannot check in, the contract fires.
+
+**Reference implementation (Solidity — deployable on any EVM chain):**
+
+```solidity
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity ^0.8.0;
+
+interface IERC721 {
+    function transferFrom(address from, address to, uint256 tokenId) external;
+}
+
+contract AmnesiisDeadManSwitch {
+    address public owner;
+    address public beneficiary;
+    uint256 public tokenId;
+    address public tokenContract;
+    uint256 public checkInInterval;   // seconds
+    uint256 public lastCheckIn;
+
+    event CheckIn(address indexed owner, uint256 timestamp);
+    event Triggered(address indexed beneficiary, uint256 tokenId);
+
+    constructor(
+        address _beneficiary,
+        address _tokenContract,
+        uint256 _tokenId,
+        uint256 _checkInInterval  // e.g. 7 days = 604800
+    ) {
+        owner = msg.sender;
+        beneficiary = _beneficiary;
+        tokenContract = _tokenContract;
+        tokenId = _tokenId;
+        checkInInterval = _checkInInterval;
+        lastCheckIn = block.timestamp;
+    }
+
+    function checkIn() external {
+        require(msg.sender == owner, "Not owner");
+        lastCheckIn = block.timestamp;
+        emit CheckIn(owner, lastCheckIn);
+    }
+
+    function trigger() external {
+        require(
+            block.timestamp >= lastCheckIn + checkInInterval,
+            "Check-in window not elapsed"
+        );
+        IERC721(tokenContract).transferFrom(owner, beneficiary, tokenId);
+        emit Triggered(beneficiary, tokenId);
+    }
+}
+```
+
+**Operational requirements:**
+- The owner MUST approve the contract to transfer the token before deployment (`tokenContract.approve(switchAddress, tokenId)`).
+- The owner MUST call `checkIn()` at least once per `checkInInterval` to prevent triggering.
+- The `beneficiary` address SHOULD belong to a trusted journalist, legal representative, or organization with a public commitment to publishing suppressed material.
+- The `checkInInterval` SHOULD be set to a value that allows for travel, illness, or communication disruption without false triggering — 7 to 30 days is recommended.
+
+**Deployment note:** This contract is deployable on Base, Polygon, Ethereum mainnet, or any EVM-compatible chain. Gas costs on Base or Polygon are fractions of a cent per check-in.
+
+### 11.3 Multi-Party Key Escrow (Shamir's Secret Sharing)
+
+For users who require that no single party can access their context alone, the decryption key MAY be split using Shamir's Secret Sharing (SSS). A threshold number of parties must cooperate to reconstruct the key.
+
+**Pattern: M-of-N key reconstruction**
+
+```python
+# Using the secretsharing library
+from secretsharing import SecretSharer
+
+# At setup: split the key into N shares, require M to reconstruct
+key_hex = K.hex()  # 32-byte AES key as hex
+shares = SecretSharer.split_secret(key_hex, M, N)
+# Distribute shares to N trusted parties
+
+# At reconstruction: collect M shares from trusted parties
+reconstructed_key = SecretSharer.recover_secret(shares[:M])
+K = bytes.fromhex(reconstructed_key)
+```
+
+**Recommended configurations:**
+- **2-of-3** — Three trusted parties; any two can reconstruct. Good for small teams.
+- **3-of-5** — Five parties; any three can reconstruct. Good for distributed journalist networks.
+
+**Operational note:** Shares SHOULD be distributed to parties in different jurisdictions. A government that can compel one party cannot compel all parties simultaneously.
+
+### 11.4 Choosing a Pattern
+
+| Threat Model | Recommended Pattern |
+|---|---|
+| Physical threat — user may be killed | Dead man's switch (11.2) |
+| Legal threat — user may be arrested | Token transfer (11.1) + Dead man's switch (11.2) |
+| State-level threat — multiple jurisdictions | Multi-party escrow (11.3) with cross-border distribution |
+| All of the above | Dead man's switch (11.2) with SSS beneficiary (11.3) |
+
+The simplest advice: **don't wait.** These patterns ensure documentation survives if the user is silenced. They do not replace the act of publishing. If documentation needs to reach the world, the most reliable path is to get it to a trusted journalist now — not to rely on technical infrastructure to do what courage needs to do first.
+
+---
+
+## 12. Prior Art Statement
 
 This specification is published as prior art under Apache 2.0. The author held US provisional patent applications covering aspects of this architecture. Those applications will not be pursued as non-provisional patents. This publication is an intentional dedication of the described methods to the public domain, establishing prior art against any future patent claims on the same methods by any party.
 
@@ -423,7 +544,7 @@ No permission is required to implement, use, modify, or commercialize this proto
 
 ---
 
-## 12. Reference Implementation
+## 13. Reference Implementation
 
 A complete reference implementation is available at:
 
@@ -440,7 +561,7 @@ The implementation includes:
 
 ---
 
-## 13. Versioning
+## 14. Versioning
 
 This document describes Anamnesis Protocol version 1.0.0.
 
