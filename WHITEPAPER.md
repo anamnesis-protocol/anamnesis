@@ -134,21 +134,49 @@ The storage layer must satisfy:
 3. **Addressability** — Data must be retrievable by a stable identifier.
 4. **Availability** — Data must be retrievable within a reasonable time for interactive use.
 
-### 4.2 Reference Implementation: Hedera File Service (HFS)
+### 4.2 Recommended Hedera Implementation: HCS-1 via Standards SDK
 
-The reference implementation uses Hedera File Service:
-- Files are addressed by a stable `FileId` (e.g., `0.0.1234567`)
-- Updates append to the file with a new version
-- Files are stored across the Hedera network nodes
-- Governed by Hedera Hashgraph consensus
+For Hedera deployments, **HCS-1** is the recommended storage backend over HFS. HCS-1 is an open standard published by Hashgraph Online (HOL) that stores content as chunked HCS messages, reconstructed on demand.
 
-### 4.3 Alternative Storage Backends
+**Why HCS-1 over HFS:**
+- HCS messages cost ~$0.0001 each — orders of magnitude cheaper than HFS file operations
+- Designed for content that updates frequently (e.g., AI context updated every session)
+- Built-in chunking and compression for larger context windows
+- Returns a stable Topic ID used as the vault reference
+
+**Implementation using the Standards SDK:**
+
+```javascript
+import { inscribe, retrieveInscription } from '@hashgraphonline/standards-sdk';
+
+// Store encrypted context
+const result = await inscribe(
+  { type: 'buffer', content: encryptedContext, fileName: 'context.enc' },
+  { accountId: operatorId, privateKey: operatorKey, network: 'mainnet' },
+  { mode: 'file', waitForConfirmation: true }
+);
+const topicId = result.inscription.topic_id; // store this as vault reference
+
+// Retrieve encrypted context
+const inscription = await retrieveInscription(transactionId);
+const encryptedContext = inscription.content;
+```
+
+Standards SDK: `npm install @hashgraphonline/standards-sdk`
+Documentation: https://hol.org/docs/libraries/standards-sdk/inscribe/
+
+### 4.3 Reference Implementation: Hedera File Service (HFS)
+
+The current code reference implementation uses Hedera File Service (`src/vault.py`). HFS is suitable for low-frequency updates but becomes expensive for daily or per-session context writes. Migration to HCS-1 is recommended for production deployments.
+
+### 4.4 Alternative Storage Backends
 
 The protocol is storage-agnostic. Any backend satisfying the requirements above is valid:
 
 | Backend | Immutability | Persistence | Notes |
 |---------|-------------|-------------|-------|
-| Hedera HFS | ✅ | ✅ | Reference implementation |
+| Hedera HCS-1 | ✅ | ✅ | **Recommended for Hedera** — cheap, frequent updates |
+| Hedera HFS | ✅ | ✅ | Current reference implementation — better for static files |
 | Arweave | ✅ | ✅ | Pay-once permanent storage; no governance council |
 | IPFS + Filecoin | Partial | Conditional | Content-addressed; persistence requires pinning |
 | Ethereum calldata | ✅ | ✅ | Expensive; suitable for small contexts |
