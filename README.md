@@ -10,6 +10,38 @@ This is a basic human right — the right to your own memory.
 
 ---
 
+## What Becomes Possible
+
+### Your AI relationship survives everything
+
+If OpenAI shuts down tomorrow, your context is on Hedera. Plug it into the next provider. Nothing lost. Your AI knows you the same way it did yesterday — because the memory was never theirs to begin with.
+
+### Switch AI models without losing yourself
+
+The same encrypted vault works with any provider. Use GPT today, Claude tomorrow, a model that doesn't exist yet in five years. Your AI relationship is not tied to any company. It travels with you.
+
+### Transfer complete AI expertise as a token
+
+Your accumulated context — everything your AI has learned about you, your domain, your work — is transferable. Sell your expertise. Gift your knowledge to a successor. Pass your AI relationship to your heirs. This is digital inheritance. It has never existed before.
+
+### AI that acts in your life without exposing your life
+
+Anamnesis includes agentic tools: your AI can retrieve your passwords, create calendar events, send encrypted messages, manage your files — all within cryptographic session boundaries. It acts on your behalf without any platform seeing the data it touches.
+
+### Prove your context hasn't been tampered with
+
+Every context update is logged to Hedera Consensus Service with a timestamp and content hash. Your AI's memory is not just private — it's verifiable. Cryptographic proof that no one has touched it.
+
+### Institutional memory with consent
+
+When an employee leaves, their accumulated AI context — their domain knowledge, their reasoning patterns, their work history — can be retained and transferred with their consent. Not lost, not stolen. Transferred.
+
+### Private AI, finally
+
+Every AI platform today can read your context, train on it, sell it, or hand it to a government. With Anamnesis, there is no plaintext on any server. The provider receives your context for one session and nothing more. Your AI relationship is yours — not a service you rent from a company that owns everything you tell it.
+
+---
+
 ## The Problem
 
 Every AI platform today owns your context:
