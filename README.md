@@ -200,6 +200,8 @@ The reference implementation includes a full encrypted personal suite, all keyed
 
 ## Quick Start
 
+**New here?** → [QUICKSTART.md](QUICKSTART.md) — 15 minutes from zero to first working implementation.
+
 ### Prerequisites
 
 - Python 3.10+
